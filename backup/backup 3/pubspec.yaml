@@ -1,0 +1,61 @@
+# name: skadutapresensi
+# description: "A new Flutter project."
+# publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# version: 1.0.0+1
+
+# environment:
+#   sdk: ^3.8.1
+
+# dependencies:
+#   flutter:
+#     sdk: flutter
+
+#   # ================ menambahkan dependency ================
+#   camera: ^0.11.0+2        # untuk akses kamera
+#   geolocator: ^13.0.1      # untuk GPS / lokasi
+#   permission_handler: ^11.3.1 # untuk izin kamera & lokasi
+#   cupertino_icons: ^1.0.8
+#   # ========================================================
+
+# dev_dependencies:
+#   flutter_test:
+#     sdk: flutter
+
+#   flutter_lints: ^5.0.0
+
+# flutter:
+#   uses-material-design: true
+
+name: skadutapresensi
+description: "A new Flutter project."
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ================ menambahkan dependency ================
+  camera: ^0.11.0+2              # untuk akses kamera
+  geolocator: ^13.0.1            # untuk GPS
+  permission_handler: ^11.3.1    # untuk izin
+  flutter_map: ^7.0.2            # map
+  latlong2: ^0.9.1               # untuk LatLng
+  cupertino_icons: ^1.0.8
+
+  
+  # ========================================================
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
