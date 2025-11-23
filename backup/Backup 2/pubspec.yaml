@@ -47,8 +47,6 @@ dependencies:
   flutter_map: ^7.0.2            # map
   latlong2: ^0.9.1               # untuk LatLng
   cupertino_icons: ^1.0.8
-
-  
   # ========================================================
 
 dev_dependencies:

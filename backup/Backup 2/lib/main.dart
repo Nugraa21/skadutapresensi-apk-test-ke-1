@@ -4,8 +4,6 @@ import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:http/http.dart' as http;
-import 'dart:io';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,12 +46,6 @@ class _HomePageState extends State<HomePage> {
   LatLng? _currentLatLng;
   bool _isGettingLocation = false;
   bool _isInitCamera = false;
-  bool _isUploading = false;
-  String? _lastUploadStatus;
-
-  // GANTI URL INI SESUAI SERVER KAMU
-  static const String _uploadUrl =
-      "http://10.10.73.67/backendapk/upload_photo.php";
 
   @override
   void initState() {
@@ -73,7 +65,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // =====================================================================
-  // INIT CAMERA
+  // INIT CAMERA FIX (NO MELAR)
   // =====================================================================
 
   Future<void> _initCamera() async {
@@ -119,37 +111,6 @@ class _HomePageState extends State<HomePage> {
     setState(() => _isGettingLocation = true);
 
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("GPS belum aktif, nyalakan dulu ya 😊"),
-            ),
-          );
-        }
-        setState(() => _isGettingLocation = false);
-        return;
-      }
-
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-      }
-
-      if (permission == LocationPermission.deniedForever ||
-          permission == LocationPermission.denied) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Izin lokasi ditolak. Aktifkan di pengaturan."),
-            ),
-          );
-        }
-        setState(() => _isGettingLocation = false);
-        return;
-      }
-
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
@@ -174,72 +135,6 @@ class _HomePageState extends State<HomePage> {
         "Lng: ${_currentLatLng!.longitude.toStringAsFixed(6)}";
   }
 
-  // =====================================================================
-  // AMBIL FOTO & UPLOAD KE SERVER (PHP + MySQL)
-  // =====================================================================
-
-  Future<void> _takePhotoAndUpload() async {
-    if (_cameraController == null ||
-        !_cameraController!.value.isInitialized ||
-        _isUploading) {
-      return;
-    }
-
-    try {
-      setState(() {
-        _isUploading = true;
-        _lastUploadStatus = null;
-      });
-
-      // Ambil lokasi dulu jika belum ada
-      if (_currentLatLng == null) {
-        await _getLocation();
-      }
-
-      // Ambil foto
-      final picture = await _cameraController!.takePicture();
-      final file = File(picture.path);
-
-      final lat = _currentLatLng?.latitude.toString() ?? "";
-      final lng = _currentLatLng?.longitude.toString() ?? "";
-
-      final uri = Uri.parse(_uploadUrl);
-      final request = http.MultipartRequest("POST", uri);
-
-      request.files.add(await http.MultipartFile.fromPath("image", file.path));
-
-      request.fields["latitude"] = lat;
-      request.fields["longitude"] = lng;
-      request.fields["captured_at"] = DateTime.now().toIso8601String();
-
-      final response = await request.send();
-
-      final responseBody = await response.stream.bytesToString();
-      print("UPLOAD RESPONSE: $responseBody");
-
-      if (response.statusCode == 200) {
-        setState(() => _lastUploadStatus = "Upload berhasil!");
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("Foto berhasil diupload")));
-      } else {
-        setState(
-          () => _lastUploadStatus = "Upload gagal (${response.statusCode})",
-        );
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Upload gagal (${response.statusCode})")),
-        );
-      }
-    } catch (e) {
-      debugPrint("Upload error: $e");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Error upload")));
-    } finally {
-      if (mounted) setState(() => _isUploading = false);
-    }
-  }
-
   @override
   void dispose() {
     _cameraController?.dispose();
@@ -247,7 +142,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // =====================================================================
-  // CAMERA TAB
+  // CAMERA TAB — FIX LAYAR MELAR
   // =====================================================================
 
   Widget _buildCameraTab() {
@@ -262,7 +157,6 @@ class _HomePageState extends State<HomePage> {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          // CAMERA BOX
           Expanded(
             child: Center(
               child: Container(
@@ -271,8 +165,8 @@ class _HomePageState extends State<HomePage> {
                   boxShadow: [
                     BoxShadow(
                       color: Colors.orange.withOpacity(0.4),
-                      blurRadius: 18,
-                      spreadRadius: 1,
+                      blurRadius: 20,
+                      spreadRadius: 2,
                     ),
                   ],
                 ),
@@ -295,7 +189,7 @@ class _HomePageState extends State<HomePage> {
 
           const SizedBox(height: 16),
 
-          // CARD INFO LOKASI
+          // CARD LOKASI
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(14),
@@ -328,52 +222,14 @@ class _HomePageState extends State<HomePage> {
               ],
             ),
           ),
-
-          const SizedBox(height: 12),
-
-          // TOMBOL AMBIL FOTO & UPLOAD
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _isUploading ? null : _takePhotoAndUpload,
-              icon: _isUploading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.camera, color: Colors.white),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orangeAccent,
-                padding: const EdgeInsets.symmetric(
-                  vertical: 14,
-                  horizontal: 20,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
-                ),
-              ),
-              label: Text(
-                _isUploading ? "Mengupload..." : "Ambil Foto & Upload",
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-
-          if (_lastUploadStatus != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _lastUploadStatus!,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-          ],
         ],
       ),
     );
   }
+
+  // =====================================================================
+  // FIX RATIO CAMERA — REAL INSTAGRAM SCALE (NO DISTORTION)
+  // =====================================================================
 
   Widget _cameraPreviewFixed() {
     final controller = _cameraController!;
@@ -385,6 +241,8 @@ class _HomePageState extends State<HomePage> {
         final maxH = constraints.maxHeight;
 
         final screenRatio = maxW / maxH;
+
+        // Scale agar tidak melar: kamera mengikuti sensor
         double scale = aspectRatio / screenRatio;
 
         if (scale < 1) scale = 1 / scale;
@@ -430,52 +288,32 @@ class _HomePageState extends State<HomePage> {
                 ),
                 const Spacer(),
                 IconButton(
-                  onPressed: _isGettingLocation ? null : _getLocation,
+                  onPressed: _getLocation,
                   icon: const Icon(Icons.my_location, color: Colors.white),
-                  tooltip: "Refresh lokasi",
                 ),
               ],
             ),
           ),
           Expanded(
             child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              margin: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFF121212),
                 borderRadius: BorderRadius.circular(22),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-                border: Border.all(
-                  color: Colors.orange.withOpacity(0.5),
-                  width: 1,
-                ),
+                border: Border.all(color: Colors.orange.withOpacity(0.4)),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(22),
                 child: _currentLatLng == null
-                    ? Center(
-                        child: _isGettingLocation
-                            ? const CircularProgressIndicator(
-                                color: Colors.orangeAccent,
-                              )
-                            : const Text(
-                                "Lokasi belum ditemukan.\nTap icon lokasi untuk refresh.",
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 14,
-                                ),
-                              ),
+                    ? const Center(
+                        child: Text(
+                          "Lokasi belum ditemukan.",
+                          style: TextStyle(color: Colors.white70),
+                        ),
                       )
                     : FlutterMap(
                         options: MapOptions(
                           initialCenter: _currentLatLng!,
-                          initialZoom: 17,
+                          initialZoom: 16,
                         ),
                         children: [
                           TileLayer(
@@ -502,7 +340,6 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
         ],
       ),
     );
@@ -519,12 +356,11 @@ class _HomePageState extends State<HomePage> {
       child: Scaffold(
         backgroundColor: Colors.black,
         appBar: AppBar(
-          elevation: 0,
-          centerTitle: true,
           title: const Text(
             "SkaduTA Presensi",
             style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.2),
           ),
+          centerTitle: true,
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -536,7 +372,6 @@ class _HomePageState extends State<HomePage> {
           ),
           bottom: const TabBar(
             indicatorColor: Colors.white,
-            indicatorWeight: 3,
             tabs: [
               Tab(icon: Icon(Icons.camera_alt), text: "Camera"),
               Tab(icon: Icon(Icons.map), text: "Map"),
