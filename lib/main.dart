@@ -100,12 +100,12 @@ class _HomePageState extends State<HomePage> {
   // API base URL (IP laptopmu)
   // static const String _baseUrl = "http://10.10.73.67/backendapk"; // Kampus unity
   // static const String _baseUrl = "http://000.000.00.00.0/backendapk"; // Wifi pribadi
-  static const String _baseUrl =
+  static const _baseUrl =
       "http://192.168.0.105/backendapk"; // Smk n2 yk Gudang barat
-  static const String _uploadUrl = "$_baseUrl/upload_photo.php";
-  static const String _getPhotosUrl = "$_baseUrl/get_photos.php";
-  static const String _deletePhotoUrl = "$_baseUrl/delete_photo.php";
-  static const String _updatePhotoUrl = "$_baseUrl/update_photo.php";
+  static const _uploadUrl = "$_baseUrl/upload_photo.php";
+  static const _getPhotosUrl = "$_baseUrl/get_photos.php";
+  static const _deletePhotoUrl = "$_baseUrl/delete_photo.php";
+  static const _updatePhotoUrl = "$_baseUrl/update_photo.php";
 
   List<Photo> _photos = [];
   bool _isLoadingPhotos = false;
