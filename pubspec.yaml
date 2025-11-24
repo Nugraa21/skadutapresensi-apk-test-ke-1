@@ -48,6 +48,10 @@ dependencies:
   latlong2: ^0.9.1               # untuk LatLng
   cupertino_icons: ^1.0.8
 
+  # geolocator: ^13.0.1
+  # flutter_map: ^7.0.2
+  # latlong2: ^0.9.1
+  image_picker: ^1.1.2
   
   # ========================================================
 
