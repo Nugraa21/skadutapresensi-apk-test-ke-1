@@ -28,10 +28,25 @@ class _PresensiPageState extends State<PresensiPage> {
 
   final ImagePicker _picker = ImagePicker();
 
-  // Koordinat SMK N 2 YK (contoh)  -7.777047019078815, 110.3671540164373
-  final double sekolahLat = -7.777047019078815;
-  final double sekolahLng = 110.3671540164373;
-  final double maxRadius = 100; // meter
+  // ===============================
+  // AREA PRESENSI (BOUNDING BOX)
+  // ===============================
+
+  // Latitude
+  final double latMax =
+      -7.7754343932798085; // pojok kiri atas  -7.7754343932798085, 110.36537551797107
+  final double latMin =
+      -7.77829886563817; // pojok kanan bawah  -7.77829886563817, 110.36823971201933
+
+  // Longitude
+  final double lngMin =
+      110.36438675304636; // pojok kiri bawah   -7.778027327276084, 110.36438675304636
+  final double lngMax =
+      110.36841167113668; // pojok kanan atas  -7.775445041912144, 110.36841167113668
+
+  // Posisi "tengah" untuk map
+  final double centerLat = -7.7770775;
+  final double centerLng = 110.3670864;
 
   @override
   void initState() {
@@ -39,6 +54,9 @@ class _PresensiPageState extends State<PresensiPage> {
     _initLocation();
   }
 
+  // =====================================
+  // BACA LOKASI USER
+  // =====================================
   Future<void> _initLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -66,16 +84,21 @@ class _PresensiPageState extends State<PresensiPage> {
     });
   }
 
-  double _distanceToSchool() {
-    if (_position == null) return 999999;
-    return Geolocator.distanceBetween(
-      _position!.latitude,
-      _position!.longitude,
-      sekolahLat,
-      sekolahLng,
-    );
+  // =====================================
+  // CEK APAKAH USER DI DALAM AREA
+  // =====================================
+  bool _isInsideArea() {
+    if (_position == null) return false;
+
+    final lat = _position!.latitude;
+    final lng = _position!.longitude;
+
+    return lat >= latMin && lat <= latMax && lng >= lngMin && lng <= lngMax;
   }
 
+  // =====================================
+  // AMBIL SELFIE
+  // =====================================
   Future<void> _pickSelfie() async {
     final XFile? img = await _picker.pickImage(
       source: ImageSource.camera,
@@ -90,22 +113,22 @@ class _PresensiPageState extends State<PresensiPage> {
     }
   }
 
+  // =====================================
+  // SUBMIT PRESENSI
+  // =====================================
   Future<void> _submitPresensi() async {
     if (_position == null) {
       _showSnack('Lokasi belum terbaca');
       return;
     }
 
-    if (_selfieFile == null) {
-      _showSnack('Selfie belum diambil');
+    if (!_isInsideArea()) {
+      _showSnack('Kamu berada di luar area sekolah!');
       return;
     }
 
-    final jarak = _distanceToSchool();
-    if (jarak > maxRadius) {
-      _showSnack(
-        'Kamu di luar jangkauan sekolah (±${jarak.toStringAsFixed(1)}m)',
-      );
+    if (_selfieFile == null) {
+      _showSnack('Selfie belum diambil');
       return;
     }
 
@@ -157,10 +180,7 @@ class _PresensiPageState extends State<PresensiPage> {
                   height: 260,
                   child: FlutterMap(
                     options: MapOptions(
-                      initialCenter: LatLng(
-                        _position!.latitude,
-                        _position!.longitude,
-                      ),
+                      initialCenter: LatLng(centerLat, centerLng),
                       initialZoom: 17,
                     ),
                     children: [
@@ -168,18 +188,10 @@ class _PresensiPageState extends State<PresensiPage> {
                         urlTemplate:
                             'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                       ),
+
+                      // MARKER POSISI USER
                       MarkerLayer(
                         markers: [
-                          Marker(
-                            point: LatLng(sekolahLat, sekolahLng),
-                            width: 40,
-                            height: 40,
-                            child: const Icon(
-                              Icons.school,
-                              color: Colors.blue,
-                              size: 32,
-                            ),
-                          ),
                           Marker(
                             point: LatLng(
                               _position!.latitude,
@@ -195,12 +207,32 @@ class _PresensiPageState extends State<PresensiPage> {
                           ),
                         ],
                       ),
+
+                      // AREA BATAS (POLYGON)
+                      PolygonLayer(
+                        polygons: [
+                          Polygon(
+                            points: [
+                              LatLng(latMax, lngMin), // kiri atas
+                              LatLng(latMax, lngMax), // kanan atas
+                              LatLng(latMin, lngMax), // kanan bawah
+                              LatLng(latMin, lngMin), // kiri bawah
+                            ],
+                            color: Colors.blue.withOpacity(0.2),
+                            borderColor: Colors.blue,
+                            borderStrokeWidth: 2,
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
+
                 const SizedBox(height: 8),
                 Text(
-                  'Jarak ke sekolah: ${_distanceToSchool().toStringAsFixed(1)} m',
+                  _isInsideArea()
+                      ? 'Status: Dalam Area Sekolah ✔'
+                      : 'Status: Di Luar Area ❌',
                   style: const TextStyle(fontSize: 12),
                 ),
                 const SizedBox(height: 8),
