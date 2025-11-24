@@ -1,33 +1,14 @@
 import 'package:flutter/material.dart';
+import '../models/user_model.dart';
 
 class DashboardPage extends StatelessWidget {
-  final String nama;
-  final String role; // user / admin / superadmin
+  final UserModel user;
 
-  const DashboardPage({super.key, required this.nama, required this.role});
-
-  String get _roleLabel {
-    switch (role) {
-      case 'admin':
-        return 'Admin';
-      case 'superadmin':
-        return 'Super Admin';
-      default:
-        return 'User (Guru/Karyawan)';
-    }
-  }
+  const DashboardPage({super.key, required this.user});
 
   @override
   Widget build(BuildContext context) {
-    Widget content;
-
-    if (role == 'admin') {
-      content = _adminContent();
-    } else if (role == 'superadmin') {
-      content = _superAdminContent();
-    } else {
-      content = _userContent();
-    }
+    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -35,8 +16,15 @@ class DashboardPage extends StatelessWidget {
         actions: [
           Center(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text(_roleLabel),
+              padding: const EdgeInsets.only(right: 8.0),
+              child: Chip(
+                label: Text(
+                  user.role.toUpperCase(),
+                  style: const TextStyle(fontSize: 11),
+                ),
+                backgroundColor: cs.primary.withOpacity(0.15),
+                side: BorderSide(color: cs.primary),
+              ),
             ),
           ),
           IconButton(
@@ -53,67 +41,131 @@ class DashboardPage extends StatelessWidget {
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: ListView(
           children: [
             Text(
-              'Selamat datang, $nama',
+              'Halo, ${user.namaLengkap}',
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
-            Expanded(child: content),
+            const SizedBox(height: 6),
+            Text(
+              'Selamat datang di sistem presensi Skaduta',
+              style: TextStyle(color: Colors.grey[700]),
+            ),
+            const SizedBox(height: 20),
+            if (user.role == 'user') _buildUserSection(context),
+            if (user.role == 'admin') _buildAdminSection(context),
+            if (user.role == 'superadmin') _buildSuperAdminSection(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _userContent() {
-    return ListView(
-      children: const [
-        ListTile(
-          leading: Icon(Icons.book),
-          title: Text('Menu Absen / Presensi'),
-          subtitle: Text('Contoh menu untuk User (Guru/Karyawan)'),
+  Widget _card({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    VoidCallback? onTap,
+  }) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(icon, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        ListTile(
-          leading: Icon(Icons.assignment),
-          title: Text('Lihat Jadwal'),
-          subtitle: Text('Contoh fitur lain untuk user'),
+      ),
+    );
+  }
+
+  Widget _buildUserSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _card(
+          icon: Icons.fingerprint,
+          title: 'Presensi',
+          subtitle: 'Menu utama untuk absen masuk / pulang',
+          onTap: () {
+            // TODO: nanti isi fitur presensi
+          },
+        ),
+        _card(
+          icon: Icons.history,
+          title: 'Riwayat Presensi',
+          subtitle: 'Lihat riwayat presensi anda',
         ),
       ],
     );
   }
 
-  Widget _adminContent() {
-    return ListView(
-      children: const [
-        ListTile(
-          leading: Icon(Icons.group),
-          title: Text('Kelola User'),
-          subtitle: Text('Admin dapat mengatur data pengguna'),
+  Widget _buildAdminSection(BuildContext context) {
+    return Column(
+      children: [
+        _card(
+          icon: Icons.analytics_outlined,
+          title: 'Rekap Presensi',
+          subtitle: 'Lihat dan kelola data presensi guru / karyawan',
         ),
-        ListTile(
-          leading: Icon(Icons.analytics),
-          title: Text('Laporan Harian'),
-          subtitle: Text('Lihat ringkasan aktivitas'),
+        _card(
+          icon: Icons.settings_suggest_outlined,
+          title: 'Pengaturan Presensi',
+          subtitle: 'Atur jam masuk / pulang dan aturan lainnya',
         ),
       ],
     );
   }
 
-  Widget _superAdminContent() {
-    return ListView(
-      children: const [
-        ListTile(
-          leading: Icon(Icons.security),
-          title: Text('Pengaturan Sistem'),
-          subtitle: Text('Super Admin dapat mengatur konfigurasi utama'),
+  Widget _buildSuperAdminSection(BuildContext context) {
+    return Column(
+      children: [
+        _card(
+          icon: Icons.supervisor_account_outlined,
+          title: 'Kelola User & Admin',
+          subtitle:
+              'CRUD akun user dan admin, bantu jika ada yang lupa password',
+          onTap: () {
+            Navigator.pushNamed(context, '/user-management');
+          },
         ),
-        ListTile(
-          leading: Icon(Icons.admin_panel_settings),
-          title: Text('Kelola Admin'),
-          subtitle: Text('Atur hak akses admin'),
+        _card(
+          icon: Icons.security_outlined,
+          title: 'Konfigurasi Sistem',
+          subtitle: 'Pengaturan level tinggi untuk sistem presensi',
         ),
       ],
     );
