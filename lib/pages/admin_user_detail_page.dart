@@ -1,4 +1,4 @@
-// admin_user_detail_page.dart - Halaman detail user: Histori presensi + konfirmasi absensi per user
+import 'dart:convert'; // Import untuk jsonEncode
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
 
@@ -64,7 +64,10 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
 
   Future<void> _updateStatus(String id, String status) async {
     try {
+      print('DEBUG UPDATE: Starting approve for ID=$id, status=$status');
       final res = await ApiService.updatePresensiStatus(id: id, status: status);
+      print('DEBUG UPDATE: Full response received: $res'); // Print Map langsung
+
       if (res['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -72,16 +75,17 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
             backgroundColor: Colors.green,
           ),
         );
-        _loadData();
+        _loadData(); // Reload tab
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(res['message'] ?? 'Gagal update status')),
         );
       }
     } catch (e) {
+      print('DEBUG UPDATE: Exception caught: $e');
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ).showSnackBar(SnackBar(content: Text('Error approve: $e')));
     }
   }
 

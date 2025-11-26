@@ -74,7 +74,7 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
-  // UPDATE PASSWORD TERPISAH (Untuk ganti password saja)
+  // UPDATE PASSWORD TERPISAH
   static Future<Map<String, dynamic>> updateUserPassword({
     required String id,
     required String newPassword,
@@ -122,6 +122,7 @@ class ApiService {
     final res = await http.get(
       Uri.parse("$baseUrl/absen_history.php?user_id=$userId"),
     );
+
     final data = jsonDecode(res.body);
     if (data["status"] == true) {
       return data["data"] as List<dynamic>;
@@ -132,18 +133,59 @@ class ApiService {
   // GET ALL PRESENSI (ADMIN)
   static Future<List<dynamic>> getAllPresensi() async {
     final res = await http.get(Uri.parse("$baseUrl/presensi_rekap.php"));
-    return jsonDecode(res.body); // Return array langsung
+    print('DEBUG API: Presensi response status: ${res.statusCode}');
+    print(
+      'DEBUG API: Presensi response body preview: ${res.body.substring(0, 200)}...',
+    );
+
+    try {
+      final data = jsonDecode(res.body);
+      if (data is List) {
+        return data;
+      } else if (data['error'] != null) {
+        throw Exception('PHP Error: ${data['error']}');
+      }
+      return [];
+    } catch (e) {
+      print('DEBUG API: JSON Parse Error: $e');
+      throw Exception('Response bukan JSON valid: $e. Cek server log.');
+    }
   }
 
-  // UPDATE PRESENSI STATUS
+  // UPDATE PRESENSI STATUS (FIX: Debug detail untuk approve, handle 500)
   static Future<Map<String, dynamic>> updatePresensiStatus({
     required String id,
     required String status,
   }) async {
+    final body = {"id": id, "status": status};
+    print('DEBUG API UPDATE: Request body: ${jsonEncode(body)}');
+
     final res = await http.post(
       Uri.parse("$baseUrl/presensi_approve.php"),
-      body: {"id": id, "status": status},
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: body,
     );
-    return jsonDecode(res.body);
+
+    print('DEBUG API UPDATE: Status code: ${res.statusCode}');
+    print(
+      'DEBUG API UPDATE: Response body raw: "${res.body}"',
+    ); // Raw body untuk debug
+
+    if (res.statusCode != 200) {
+      throw Exception(
+        'HTTP Error ${res.statusCode}: ${res.body}',
+      ); // Fix: Include body in exception
+    }
+
+    try {
+      final data = jsonDecode(res.body);
+      print('DEBUG API UPDATE: Parsed JSON: ${jsonEncode(data)}');
+      return data;
+    } catch (e) {
+      print('DEBUG API UPDATE: JSON Parse Error: $e');
+      throw Exception(
+        'Response bukan JSON valid: ${res.body}. Cek PHP approve.',
+      );
+    }
   }
 }
