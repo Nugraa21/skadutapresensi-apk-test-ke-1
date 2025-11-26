@@ -47,7 +47,7 @@ dependencies:
   flutter_map: ^7.0.2            # map
   latlong2: ^0.9.1               # untuk LatLng
   cupertino_icons: ^1.0.8
-
+  http: ^1.6.0                 # untuk http request
   # geolocator: ^13.0.1
   # flutter_map: ^7.0.2
   # latlong2: ^0.9.1

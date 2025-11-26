@@ -8,12 +8,9 @@ plugins {
 android {
     namespace = "com.example.skadutapresensi"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
-    // namespace = "nugra217.github.io.skadutapresensi"
-    // compileSdkVersion = 33
-    // ndkVersion = "21.4.7075529"
-    // needsBuildTools = true
-    // buildToolsVersion = "33.0.2"
+
+    // FIX: Pakai NDK versi yang diminta plugin (27.0.12077973)
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -25,10 +22,7 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.skadutapresensi"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -37,8 +31,6 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }

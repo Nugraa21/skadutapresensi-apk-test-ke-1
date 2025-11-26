@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   // GANTI IP SESUAI LAPTOPMU
-  static const String baseUrl = "http://192.168.0.105/backendapk/";
+  static const String baseUrl = "http://192.168.0.102/backendapk";
 
   // LOGIN
   static Future<Map<String, dynamic>> login({
