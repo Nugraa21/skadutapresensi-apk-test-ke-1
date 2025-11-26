@@ -13,6 +13,18 @@ class DashboardPage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),
+        backgroundColor: cs.primary,
+        foregroundColor: Colors.white,
+        elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [cs.primary, cs.primary.withOpacity(0.8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         actions: [
           Center(
             child: Padding(
@@ -20,10 +32,14 @@ class DashboardPage extends StatelessWidget {
               child: Chip(
                 label: Text(
                   user.role.toUpperCase(),
-                  style: const TextStyle(fontSize: 11),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 backgroundColor: cs.primary.withOpacity(0.15),
-                side: BorderSide(color: cs.primary),
+                side: BorderSide(color: cs.primary, width: 1.5),
+                avatar: Icon(Icons.shield, size: 16, color: cs.primary),
               ),
             ),
           ),
@@ -39,25 +55,55 @@ class DashboardPage extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: ListView(
-          children: [
-            Text(
-              'Halo, ${user.namaLengkap}',
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [cs.primary.withOpacity(0.05), Colors.transparent],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Halo, ${user.namaLengkap}',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: cs.primary,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Selamat datang di sistem presensi Skaduta',
+                    style: TextStyle(color: Colors.grey[700], fontSize: 16),
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
             ),
-            const SizedBox(height: 6),
-            Text(
-              'Selamat datang di sistem presensi Skaduta',
-              style: TextStyle(color: Colors.grey[700]),
+          ),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (user.role == 'user') _buildUserSection(context),
+                  if (user.role == 'admin') _buildAdminSection(context),
+                  if (user.role == 'superadmin')
+                    _buildSuperAdminSection(context),
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
-            const SizedBox(height: 20),
-            if (user.role == 'user') _buildUserSection(context),
-            if (user.role == 'admin') _buildAdminSection(context),
-            if (user.role == 'superadmin') _buildSuperAdminSection(context),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -66,40 +112,56 @@ class DashboardPage extends StatelessWidget {
     required IconData icon,
     required String title,
     required String subtitle,
-    VoidCallback? onTap,
+    required VoidCallback onTap,
   }) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Material(
+        elevation: 4,
         borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              Icon(icon, size: 28),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: const TextStyle(fontSize: 12, color: Colors.grey),
-                    ),
-                  ],
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: onTap,
+          splashColor: Colors.blue.withOpacity(0.1),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, size: 32, color: Colors.blue),
                 ),
-              ),
-            ],
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle,
+                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.grey,
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -139,10 +201,7 @@ class DashboardPage extends StatelessWidget {
           title: 'Kelola User Presensi',
           subtitle: 'Lihat list user, histori per user, dan konfirmasi absensi',
           onTap: () {
-            Navigator.pushNamed(
-              context,
-              '/admin-user-list',
-            ); // Halaman list user dengan histori & konfirmasi
+            Navigator.pushNamed(context, '/admin-user-list');
           },
         ),
         _card(
@@ -174,10 +233,7 @@ class DashboardPage extends StatelessWidget {
           title: 'Kelola User Presensi',
           subtitle: 'Lihat list user, histori per user, dan konfirmasi absensi',
           onTap: () {
-            Navigator.pushNamed(
-              context,
-              '/admin-user-list',
-            ); // Sama seperti admin biasa
+            Navigator.pushNamed(context, '/admin-user-list');
           },
         ),
         _card(
