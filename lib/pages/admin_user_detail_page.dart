@@ -69,7 +69,6 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
       print('DEBUG UPDATE: Full response received: ${jsonEncode(res)}');
 
       if (res['success'] == true || res['status'] == true) {
-        // Handle both response formats
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(res['message'] ?? 'Status diperbarui'),
@@ -132,8 +131,8 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
   Widget _buildHistoryTab() {
     if (_loading) {
       return ListView.builder(
-        padding: const EdgeInsets.all(10),
-        itemCount: 5, // Skeleton
+        padding: const EdgeInsets.all(16),
+        itemCount: 5,
         itemBuilder: (ctx, i) => const Card(
           child: ListTile(
             leading: CircularProgressIndicator(strokeWidth: 2),
@@ -160,7 +159,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
     return RefreshIndicator(
       onRefresh: _loadData,
       child: ListView.builder(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(16),
         itemCount: _history.length,
         itemBuilder: (ctx, i) {
           final item = _history[i];
@@ -179,6 +178,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+            margin: const EdgeInsets.symmetric(vertical: 8),
             child: ListTile(
               title: Text(
                 item['jenis'] ?? '',
@@ -252,7 +252,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
   Widget _buildPendingTab() {
     if (_loading) {
       return ListView.builder(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(16),
         itemCount: 3,
         itemBuilder: (ctx, i) => const Card(
           child: ListTile(
@@ -284,7 +284,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
     return RefreshIndicator(
       onRefresh: _loadData,
       child: ListView.builder(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(16),
         itemCount: _pendingPresensi.length,
         itemBuilder: (ctx, i) {
           final item = _pendingPresensi[i];
@@ -298,6 +298,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+            margin: const EdgeInsets.symmetric(vertical: 8),
             child: ListTile(
               title: Text(
                 item['jenis'] ?? '',
@@ -383,6 +384,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
         title: Text(widget.userName),
         backgroundColor: cs.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,

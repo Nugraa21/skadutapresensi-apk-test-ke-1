@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
 
@@ -128,7 +129,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                       id: user['id'].toString(),
                       username: usernameC.text.trim(),
                       namaLengkap: namaC.text.trim(),
-                      password: passwordC.text.trim(), // Tambah password
+                      password: passwordC.text.trim(),
                     );
                     final ok = res['status'] == 'success';
                     if (ctx.mounted) {
@@ -161,13 +162,14 @@ class _UserManagementPageState extends State<UserManagementPage> {
         title: const Text('Kelola User & Admin'),
         backgroundColor: cs.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadUsers,
               child: ListView.builder(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 itemCount: _users.length,
                 itemBuilder: (ctx, index) {
                   final u = _users[index];
@@ -194,6 +196,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     elevation: 2,
+                    margin: const EdgeInsets.symmetric(vertical: 8),
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: badgeColor.withOpacity(0.2),

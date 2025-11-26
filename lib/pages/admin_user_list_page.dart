@@ -1,7 +1,7 @@
-import 'package:flutter/foundation.dart';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
-import 'admin_user_detail_page.dart'; // Pastiin file ini ada
+import 'admin_user_detail_page.dart';
 
 class AdminUserListPage extends StatefulWidget {
   const AdminUserListPage({super.key});
@@ -40,7 +40,6 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
         });
         return;
       }
-      // Filter hanya user biasa, dengan null check ketat
       final filteredUsers = data.where((u) {
         final role = u['role']?.toString().toLowerCase() ?? '';
         final id = u['id']?.toString();
@@ -96,7 +95,6 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
       ),
       body: Column(
         children: [
-          // Search Bar - Bagian ini aman
           Container(
             padding: const EdgeInsets.all(16),
             child: TextField(
@@ -122,7 +120,6 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
               ),
             ),
           ),
-          // Expanded - INI BAGIAN YANG SERING ERROR, UDAH FIX KURUNG & KOMA
           Expanded(
             child: _loading
                 ? const Center(
@@ -204,9 +201,7 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
                                   child: Padding(
                                     padding: const EdgeInsets.all(16),
                                     child: Row(
-                                      // Row mulai di sini
                                       children: [
-                                        // Children list mulai
                                         CircleAvatar(
                                           radius: 30,
                                           backgroundColor: cs.primary
@@ -224,13 +219,10 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
                                         ),
                                         const SizedBox(width: 16),
                                         Expanded(
-                                          // Expanded mulai - INI LINE 127 APPROX
                                           child: Column(
-                                            // Child Expanded: Column
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
-                                              // Column children
                                               Text(
                                                 nama,
                                                 style: const TextStyle(
@@ -252,26 +244,25 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
                                                     color: Colors.grey[600],
                                                   ),
                                                 ),
-                                            ], // Tutup Column children
-                                          ), // Tutup child Expanded
-                                        ), // Tutup Expanded - KOMA INI PENTING!
+                                            ],
+                                          ),
+                                        ),
                                         Icon(
-                                          // Item selanjutnya di Row
                                           Icons.arrow_forward_ios,
                                           color: cs.primary,
                                           size: 20,
                                         ),
-                                      ], // Tutup Row children
-                                    ), // Tutup Padding child
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
                             },
                           ),
                   ),
-          ), // Tutup Expanded utama
-        ], // Tutup Column children
-      ), // Tutup body Scaffold
-    ); // Tutup Scaffold
-  } // Tutup build method
-}  // Tutup State class
+          ),
+        ],
+      ),
+    );
+  }
+}

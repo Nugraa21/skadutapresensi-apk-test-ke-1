@@ -53,6 +53,7 @@ class _HistoryPageState extends State<HistoryPage> {
         title: const Text('Riwayat Presensi'),
         backgroundColor: cs.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           DropdownButton<String>(
             value: _filterJenis,
@@ -74,7 +75,7 @@ class _HistoryPageState extends State<HistoryPage> {
               child: Column(
                 children: [
                   Padding(
-                    padding: const EdgeInsets.all(8),
+                    padding: const EdgeInsets.all(16),
                     child: Text(
                       'Total: ${_filteredItems.length}',
                       style: const TextStyle(fontWeight: FontWeight.bold),
@@ -103,7 +104,7 @@ class _HistoryPageState extends State<HistoryPage> {
                             ),
                           )
                         : ListView.builder(
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(16),
                             itemCount: _filteredItems.length,
                             itemBuilder: (ctx, i) {
                               final item = _filteredItems[i];
@@ -118,6 +119,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
+                                margin: const EdgeInsets.symmetric(vertical: 8),
                                 child: ListTile(
                                   leading: Icon(
                                     _getIconForJenis(item['jenis'] ?? ''),

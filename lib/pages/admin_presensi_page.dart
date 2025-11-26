@@ -244,6 +244,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
         title: const Text('Persetujuan Presensi'),
         backgroundColor: cs.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           DropdownButton<String>(
             value: _filterStatus,
@@ -260,10 +261,10 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(16),
             child: Text(
               'Total: ${_filteredItems.length}',
-              style: TextStyle(fontWeight: FontWeight.bold),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ),
           Expanded(
@@ -272,7 +273,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                 : RefreshIndicator(
                     onRefresh: _loadPresensi,
                     child: ListView.builder(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(16),
                       itemCount: _filteredItems.length,
                       itemBuilder: (ctx, i) {
                         final item = _filteredItems[i];
@@ -297,6 +298,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
+                          margin: const EdgeInsets.symmetric(vertical: 8),
                           child: ListTile(
                             onTap: () => _showDetailDialog(item),
                             title: Text(

@@ -23,15 +23,16 @@ class _AdminHistoryPageState extends State<AdminHistoryPage> {
   Future<void> _loadAllHistory() async {
     setState(() => _loading = true);
     try {
-      // Asumsi ApiService punya method getAllHistory, atau gunakan getAllPresensi dan filter
-      final data =
-          await ApiService.getAllPresensi(); // Ganti ke getAllHistory jika ada
+      final data = await ApiService.getAllPresensi();
       setState(() => _history = data ?? []);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal load history: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal load history: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     } finally {
       setState(() => _loading = false);
@@ -65,6 +66,7 @@ class _AdminHistoryPageState extends State<AdminHistoryPage> {
         title: const Text("Rekap Presensi Semua User"),
         backgroundColor: cs.primary,
         foregroundColor: Colors.white,
+        elevation: 0,
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -74,6 +76,11 @@ class _AdminHistoryPageState extends State<AdminHistoryPage> {
             onSelected: (value) {
               if (value == 'filter') {
                 _showDateFilter();
+              } else if (value == 'clear') {
+                setState(() {
+                  _startDate = null;
+                  _endDate = null;
+                });
               }
             },
             itemBuilder: (context) => [
@@ -105,7 +112,7 @@ class _AdminHistoryPageState extends State<AdminHistoryPage> {
                       ),
                     )
                   : ListView.builder(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.all(16),
                       itemCount: _filteredHistory.length,
                       itemBuilder: (context, index) {
                         final h = _filteredHistory[index];
@@ -114,7 +121,7 @@ class _AdminHistoryPageState extends State<AdminHistoryPage> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          margin: const EdgeInsets.symmetric(vertical: 4),
+                          margin: const EdgeInsets.symmetric(vertical: 8),
                           child: ListTile(
                             leading: CircleAvatar(
                               backgroundColor: cs.primary.withOpacity(0.2),
