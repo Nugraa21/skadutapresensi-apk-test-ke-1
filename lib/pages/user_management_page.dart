@@ -72,6 +72,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
   Future<void> _editUser(Map<String, dynamic> user) async {
     final usernameC = TextEditingController(text: user['username']);
     final namaC = TextEditingController(text: user['nama_lengkap']);
+    final passwordC = TextEditingController(); // Baru untuk password
 
     final saved = await showModalBottomSheet<bool>(
       context: context,
@@ -96,6 +97,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                 decoration: const InputDecoration(
                   labelText: 'Username',
                   prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 8),
@@ -104,6 +106,17 @@ class _UserManagementPageState extends State<UserManagementPage> {
                 decoration: const InputDecoration(
                   labelText: 'Nama Lengkap',
                   prefixIcon: Icon(Icons.badge_outlined),
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 8),
+              TextField(
+                controller: passwordC,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Password Baru (kosongkan jika tidak ganti)',
+                  prefixIcon: Icon(Icons.lock_outline),
+                  border: OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 16),
@@ -115,6 +128,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                       id: user['id'].toString(),
                       username: usernameC.text.trim(),
                       namaLengkap: namaC.text.trim(),
+                      password: passwordC.text.trim(), // Tambah password
                     );
                     final ok = res['status'] == 'success';
                     if (ctx.mounted) {
@@ -143,7 +157,11 @@ class _UserManagementPageState extends State<UserManagementPage> {
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Kelola User & Admin')),
+      appBar: AppBar(
+        title: const Text('Kelola User & Admin'),
+        backgroundColor: cs.primary,
+        foregroundColor: Colors.white,
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -175,6 +193,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
+                    elevation: 2,
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: badgeColor.withOpacity(0.2),

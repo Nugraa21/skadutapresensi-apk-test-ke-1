@@ -34,12 +34,184 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
     }
   }
 
-  Future<void> _updateStatus(String id, String status) async {
-    final res = await ApiService.updatePresensiStatus(id: id, status: status);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(res['message'] ?? 'Status diperbarui')),
+  Future<void> _showDetailDialog(dynamic item) async {
+    final status = item['status'] ?? 'Pending'; // Samain dengan PHP
+    final baseUrl = ApiService.baseUrl;
+    final fotoUrl = item['selfie'] != null && item['selfie'].isNotEmpty
+        ? '$baseUrl/selfie/${item['selfie']}' // Fix URL foto
+        : null;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(
+              status == 'Disetujui'
+                  ? Icons.check_circle
+                  : status == 'Ditolak'
+                  ? Icons.cancel
+                  : Icons.pending,
+              color: status == 'Disetujui'
+                  ? Colors.green
+                  : status == 'Ditolak'
+                  ? Colors.red
+                  : Colors.orange,
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: Text('${item['nama_lengkap']} - ${item['jenis']}')),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Tanggal: ${item['created_at']}'),
+              const SizedBox(height: 8),
+              Text('Keterangan: ${item['keterangan'] ?? '-'}'),
+              const SizedBox(height: 8),
+              if (fotoUrl != null) ...[
+                const Text(
+                  'Foto Presensi:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                GestureDetector(
+                  onTap: () => _showFullPhoto(fotoUrl), // Tap buat enlarge
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      fotoUrl,
+                      height: 250,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return const Center(child: CircularProgressIndicator());
+                      },
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        height: 250,
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.error,
+                          size: 50,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+              ] else
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.image_not_supported, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text(
+                        'Tidak ada foto',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: 8),
+              Text(
+                'Status Saat Ini: $status',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: status == 'Disetujui'
+                      ? Colors.green
+                      : status == 'Ditolak'
+                      ? Colors.red
+                      : Colors.orange,
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          if (status == 'Pending') ...[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _updateStatus(item['id'].toString(), 'Disetujui');
+              },
+              child: const Text(
+                'Setujui',
+                style: TextStyle(color: Colors.green),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _updateStatus(item['id'].toString(), 'Ditolak');
+              },
+              child: const Text('Tolak', style: TextStyle(color: Colors.red)),
+            ),
+          ] else
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Tutup'),
+            ),
+        ],
+      ),
     );
-    _loadPresensi();
+  }
+
+  void _showFullPhoto(String url) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Stack(
+          children: [
+            InteractiveViewer(child: Image.network(url, fit: BoxFit.contain)),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _updateStatus(String id, String status) async {
+    try {
+      final res = await ApiService.updatePresensiStatus(id: id, status: status);
+      if (res['success'] == true) {
+        // Samain dengan PHP response
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(res['message'] ?? 'Status diperbarui'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(res['message'] ?? 'Gagal update status')),
+        );
+      }
+      _loadPresensi();
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
   }
 
   @override
@@ -55,7 +227,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                 itemCount: _items.length,
                 itemBuilder: (ctx, i) {
                   final item = _items[i];
-                  final status = item['status'] ?? 'Pending';
+                  final status = item['status'] ?? 'Pending'; // Samain field
                   Color statusColor;
                   if (status == 'Disetujui') {
                     statusColor = Colors.green;
@@ -65,51 +237,96 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                     statusColor = Colors.orange;
                   }
 
+                  final baseUrl = ApiService.baseUrl;
+                  final fotoUrl =
+                      item['selfie'] != null && item['selfie'].isNotEmpty
+                      ? '$baseUrl/selfie/${item['selfie']}'
+                      : null;
+
                   return Card(
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     child: ListTile(
+                      onTap: () => _showDetailDialog(item),
                       title: Text(
                         '${item['nama_lengkap']} - ${item['jenis']}',
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      subtitle: Text(
-                        'Tgl: ${item['created_at']}\nKet: ${item['keterangan'] ?? '-'}',
-                      ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          Text('Tgl: ${item['created_at']}'),
+                          Text('Ket: ${item['keterangan'] ?? '-'}'),
                           Text(
-                            status,
+                            'Status: $status',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: statusColor,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          if (status == 'Pending')
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(Icons.check, size: 20),
-                                  color: Colors.green,
-                                  onPressed: () => _updateStatus(
-                                    item['id'].toString(),
-                                    'Disetujui',
-                                  ),
+                          if (fotoUrl != null) ...[
+                            const SizedBox(height: 4),
+                            GestureDetector(
+                              onTap: () => _showFullPhoto(fotoUrl),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(4),
+                                child: Image.network(
+                                  fotoUrl,
+                                  height: 60,
+                                  width: 60,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return Container(
+                                          height: 60,
+                                          width: 60,
+                                          color: Colors.grey[200],
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                        height: 60,
+                                        width: 60,
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[200],
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                        ),
+                                        child: const Icon(
+                                          Icons.image_not_supported,
+                                          size: 30,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
                                 ),
-                                IconButton(
-                                  icon: const Icon(Icons.close, size: 20),
-                                  color: Colors.red,
-                                  onPressed: () => _updateStatus(
-                                    item['id'].toString(),
-                                    'Ditolak',
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
+                          ],
                         ],
                       ),
+                      trailing: status == 'Pending'
+                          ? const Icon(
+                              Icons.arrow_forward_ios,
+                              size: 16,
+                              color: Colors.orange,
+                            )
+                          : Icon(
+                              status == 'Disetujui'
+                                  ? Icons.check_circle
+                                  : Icons.cancel,
+                              color: statusColor,
+                            ),
                     ),
                   );
                 },

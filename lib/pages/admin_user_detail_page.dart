@@ -39,11 +39,9 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
   Future<void> _loadData() async {
     setState(() => _loading = true);
     try {
-      // Load histori presensi user
       final historyData = await ApiService.getUserHistory(widget.userId);
       setState(() => _history = historyData);
 
-      // Load pending presensi (filter dari getAllPresensi, atau endpoint baru)
       final allPresensi = await ApiService.getAllPresensi();
       final pending = allPresensi
           .where(
@@ -67,14 +65,14 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
   Future<void> _updateStatus(String id, String status) async {
     try {
       final res = await ApiService.updatePresensiStatus(id: id, status: status);
-      if (res['status'] == true) {
+      if (res['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(res['message'] ?? 'Status diperbarui'),
             backgroundColor: Colors.green,
           ),
         );
-        _loadData(); // Reload tab
+        _loadData();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(res['message'] ?? 'Gagal update status')),
@@ -85,6 +83,28 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
         context,
       ).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
+  }
+
+  void _showFullPhoto(String? url) {
+    if (url == null) return;
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Stack(
+          children: [
+            InteractiveViewer(child: Image.network(url, fit: BoxFit.contain)),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildHistoryTab() {
@@ -106,6 +126,11 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
         if (status == 'Disetujui') statusColor = Colors.green;
         if (status == 'Ditolak') statusColor = Colors.red;
 
+        final baseUrl = ApiService.baseUrl;
+        final fotoUrl = item['selfie'] != null && item['selfie'].isNotEmpty
+            ? '$baseUrl/selfie/${item['selfie']}'
+            : null;
+
         return Card(
           child: ListTile(
             title: Text(
@@ -118,11 +143,55 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
                 Text('Tgl: ${item['created_at']}'),
                 Text('Ket: ${item['keterangan'] ?? '-'}'),
                 Text('Status: $status', style: TextStyle(color: statusColor)),
+                if (fotoUrl != null) ...[
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    onTap: () => _showFullPhoto(fotoUrl),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Image.network(
+                        fotoUrl,
+                        height: 60,
+                        width: 60,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            height: 60,
+                            width: 60,
+                            color: Colors.grey[200],
+                            child: const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          height: 60,
+                          width: 60,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Icon(
+                            Icons.image_not_supported,
+                            size: 30,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
-            trailing: item['selfie'] != null && item['selfie'].isNotEmpty
-                ? const Icon(Icons.image, size: 20)
-                : null,
+            trailing: Icon(
+              status == 'Disetujui'
+                  ? Icons.check_circle
+                  : status == 'Ditolak'
+                  ? Icons.cancel
+                  : Icons.pending,
+              color: statusColor,
+            ),
           ),
         );
       },
@@ -143,6 +212,11 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
       itemCount: _pendingPresensi.length,
       itemBuilder: (ctx, i) {
         final item = _pendingPresensi[i];
+        final baseUrl = ApiService.baseUrl;
+        final fotoUrl = item['selfie'] != null && item['selfie'].isNotEmpty
+            ? '$baseUrl/selfie/${item['selfie']}'
+            : null;
+
         return Card(
           child: ListTile(
             title: Text(
@@ -155,6 +229,45 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
                 Text('Tgl: ${item['created_at']}'),
                 Text('Ket: ${item['keterangan'] ?? '-'}'),
                 const Text('Status: Pending'),
+                if (fotoUrl != null) ...[
+                  const SizedBox(height: 4),
+                  GestureDetector(
+                    onTap: () => _showFullPhoto(fotoUrl),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: Image.network(
+                        fotoUrl,
+                        height: 60,
+                        width: 60,
+                        fit: BoxFit.cover,
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return Container(
+                            height: 60,
+                            width: 60,
+                            color: Colors.grey[200],
+                            child: const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          );
+                        },
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          height: 60,
+                          width: 60,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Icon(
+                            Icons.image_not_supported,
+                            size: 30,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
             trailing: Row(

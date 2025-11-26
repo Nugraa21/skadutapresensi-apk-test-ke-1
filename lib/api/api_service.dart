@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // GANTI IP SESUAI LAPTOPMU (pastikan PHP jalan di port 80)
   static const String baseUrl = "http://192.168.0.102/backendapk";
 
   // LOGIN
@@ -14,7 +13,6 @@ class ApiService {
       Uri.parse("$baseUrl/login.php"),
       body: {"input": input, "password": password},
     );
-
     return jsonDecode(res.body);
   }
 
@@ -36,7 +34,6 @@ class ApiService {
         "role": role,
       },
     );
-
     return jsonDecode(res.body);
   }
 
@@ -59,33 +56,45 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
-  // UPDATE USER
+  // UPDATE USER (Tambah password optional)
   static Future<Map<String, dynamic>> updateUser({
     required String id,
     required String username,
     required String namaLengkap,
+    String? password, // Optional
   }) async {
+    final body = {"id": id, "username": username, "nama_lengkap": namaLengkap};
+    if (password != null && password.isNotEmpty) {
+      body["password"] = password;
+    }
     final res = await http.post(
       Uri.parse("$baseUrl/update_user.php"),
-      body: {"id": id, "username": username, "nama_lengkap": namaLengkap},
+      body: body,
     );
     return jsonDecode(res.body);
   }
 
-  // ==========================
-  // PRESENSI (USER)
-  // ==========================
+  // UPDATE PASSWORD TERPISAH (Untuk ganti password saja)
+  static Future<Map<String, dynamic>> updateUserPassword({
+    required String id,
+    required String newPassword,
+  }) async {
+    final res = await http.post(
+      Uri.parse("$baseUrl/update_password.php"),
+      body: {"id": id, "password": newPassword},
+    );
+    return jsonDecode(res.body);
+  }
 
-  // Kirim presensi (FIX: Key samain sama PHP, tambah debug)
+  // PRESENSI SUBMIT
   static Future<Map<String, dynamic>> submitPresensi({
     required String userId,
-    required String jenis, // Masuk / Pulang / Izin / Pulang Cepat
+    required String jenis,
     required String keterangan,
     required String latitude,
     required String longitude,
     required String base64Image,
   }) async {
-    // DEBUG: Print body sebelum kirim
     final body = {
       "userId": userId,
       "jenis": jenis,
@@ -94,28 +103,25 @@ class ApiService {
       "longitude": longitude,
       "base64Image": base64Image,
     };
-    print('DEBUG API: Request body: ${jsonEncode(body)}'); // Preview body
+    print('DEBUG API: Request body: ${jsonEncode(body)}');
 
     final res = await http.post(
       Uri.parse("$baseUrl/absen.php"),
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      }, // Form body
-      body: body, // Key samain PHP
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: body,
     );
 
-    print('DEBUG API: Status code: ${res.statusCode}'); // 200 OK?
-    print('DEBUG API: Response body: ${res.body}'); // Error message?
+    print('DEBUG API: Status code: ${res.statusCode}');
+    print('DEBUG API: Response body: ${res.body}');
 
     return jsonDecode(res.body);
   }
 
-  // Riwayat presensi user
+  // GET USER HISTORY
   static Future<List<dynamic>> getUserHistory(String userId) async {
     final res = await http.get(
       Uri.parse("$baseUrl/absen_history.php?user_id=$userId"),
     );
-
     final data = jsonDecode(res.body);
     if (data["status"] == true) {
       return data["data"] as List<dynamic>;
@@ -123,27 +129,19 @@ class ApiService {
     return [];
   }
 
-  // ==========================
-  // PRESENSI (ADMIN)
-  // ==========================
-
-  // Semua presensi (untuk admin)
+  // GET ALL PRESENSI (ADMIN)
   static Future<List<dynamic>> getAllPresensi() async {
-    final res = await http.get(Uri.parse("$baseUrl/absen_admin_list.php"));
-    final data = jsonDecode(res.body);
-    if (data["status"] == true) {
-      return data["data"] as List<dynamic>;
-    }
-    return [];
+    final res = await http.get(Uri.parse("$baseUrl/presensi_rekap.php"));
+    return jsonDecode(res.body); // Return array langsung
   }
 
-  // Approve / Reject presensi
+  // UPDATE PRESENSI STATUS
   static Future<Map<String, dynamic>> updatePresensiStatus({
     required String id,
-    required String status, // Disetujui / Ditolak
+    required String status,
   }) async {
     final res = await http.post(
-      Uri.parse("$baseUrl/absen_approve.php"),
+      Uri.parse("$baseUrl/presensi_approve.php"),
       body: {"id": id, "status": status},
     );
     return jsonDecode(res.body);
