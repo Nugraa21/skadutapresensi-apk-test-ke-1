@@ -9,6 +9,9 @@ import 'models/user_model.dart';
 import 'pages/presensi_page.dart';
 import 'pages/history_page.dart';
 import 'pages/admin_presensi_page.dart';
+// PAGE BARU ADMIN USER
+import 'pages/admin_user_list_page.dart';
+import 'pages/admin_user_detail_page.dart';
 
 void main() {
   runApp(const SkadutaApp());
@@ -52,6 +55,9 @@ class SkadutaApp extends StatelessWidget {
         if (settings.name == '/history') {
           final user = settings.arguments as UserModel;
           return MaterialPageRoute(builder: (_) => HistoryPage(user: user));
+        }
+        if (settings.name == '/admin-user-list') {
+          return MaterialPageRoute(builder: (_) => const AdminUserListPage());
         }
         return null;
       },

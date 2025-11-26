@@ -132,11 +132,23 @@ class DashboardPage extends StatelessWidget {
 
   Widget _buildAdminSection(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _card(
+          icon: Icons.list_alt,
+          title: 'Kelola User Presensi',
+          subtitle: 'Lihat list user, histori per user, dan konfirmasi absensi',
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              '/admin-user-list',
+            ); // Halaman list user dengan histori & konfirmasi
+          },
+        ),
+        _card(
           icon: Icons.verified_outlined,
-          title: 'Persetujuan Presensi',
-          subtitle: 'Setujui / tolak presensi user',
+          title: 'Konfirmasi Absensi',
+          subtitle: 'Setujui / tolak presensi user secara global',
           onTap: () {
             Navigator.pushNamed(context, '/admin-presensi');
           },
@@ -147,20 +159,31 @@ class DashboardPage extends StatelessWidget {
 
   Widget _buildSuperAdminSection(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _card(
           icon: Icons.supervisor_account_outlined,
           title: 'Kelola User & Admin',
-          subtitle:
-              'CRUD akun user dan admin, bantu jika ada yang lupa password',
+          subtitle: 'CRUD akun user dan admin, edit info, ganti password',
           onTap: () {
             Navigator.pushNamed(context, '/user-management');
           },
         ),
         _card(
+          icon: Icons.list_alt,
+          title: 'Kelola User Presensi',
+          subtitle: 'Lihat list user, histori per user, dan konfirmasi absensi',
+          onTap: () {
+            Navigator.pushNamed(
+              context,
+              '/admin-user-list',
+            ); // Sama seperti admin biasa
+          },
+        ),
+        _card(
           icon: Icons.verified_outlined,
-          title: 'Persetujuan Presensi',
-          subtitle: 'Setujui / tolak presensi user',
+          title: 'Konfirmasi Absensi',
+          subtitle: 'Setujui / tolak presensi user secara global',
           onTap: () {
             Navigator.pushNamed(context, '/admin-presensi');
           },

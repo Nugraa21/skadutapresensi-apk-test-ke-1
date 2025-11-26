@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // GANTI IP SESUAI LAPTOPMU
+  // GANTI IP SESUAI LAPTOPMU (pastikan PHP jalan di port 80)
   static const String baseUrl = "http://192.168.0.102/backendapk";
 
   // LOGIN
@@ -76,7 +76,7 @@ class ApiService {
   // PRESENSI (USER)
   // ==========================
 
-  // Kirim presensi (Masuk/Pulang/Izin/Pulang Cepat)
+  // Kirim presensi (FIX: Key samain sama PHP, tambah debug)
   static Future<Map<String, dynamic>> submitPresensi({
     required String userId,
     required String jenis, // Masuk / Pulang / Izin / Pulang Cepat
@@ -85,17 +85,27 @@ class ApiService {
     required String longitude,
     required String base64Image,
   }) async {
+    // DEBUG: Print body sebelum kirim
+    final body = {
+      "userId": userId,
+      "jenis": jenis,
+      "keterangan": keterangan,
+      "latitude": latitude,
+      "longitude": longitude,
+      "base64Image": base64Image,
+    };
+    print('DEBUG API: Request body: ${jsonEncode(body)}'); // Preview body
+
     final res = await http.post(
       Uri.parse("$baseUrl/absen.php"),
-      body: {
-        "user_id": userId,
-        "jenis": jenis,
-        "keterangan": keterangan,
-        "lat": latitude,
-        "lng": longitude,
-        "image": base64Image,
-      },
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      }, // Form body
+      body: body, // Key samain PHP
     );
+
+    print('DEBUG API: Status code: ${res.statusCode}'); // 200 OK?
+    print('DEBUG API: Response body: ${res.body}'); // Error message?
 
     return jsonDecode(res.body);
   }
