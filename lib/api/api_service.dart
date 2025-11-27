@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = "http://192.168.0.102/backendapk";
+  static const String baseUrl = "http://192.168.137.1/backendapk"; // smk yk
+  // static const String baseUrl = "http://192.168.0.103/backendapk"; // gudang barat
 
   // LOGIN
   static Future<Map<String, dynamic>> login({
