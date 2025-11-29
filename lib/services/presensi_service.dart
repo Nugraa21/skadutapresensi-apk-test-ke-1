@@ -5,7 +5,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class PresensiService {
-  final String baseUrl = "http://192.168.0.105/skaduta_api";
+  final String baseUrl = "http://10.10.77.132/skaduta_api";
 
   Future<Map<String, dynamic>> submitPresensi(
     String userId,
