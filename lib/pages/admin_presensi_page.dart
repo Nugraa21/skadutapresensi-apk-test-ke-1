@@ -1,10 +1,9 @@
+// pages/admin_presensi_page.dart (update handle response dari getAllPresensi yang sekarang return List dari data["data"])
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
-// import '../api/api_html_adapter.dart';
 
 class AdminPresensiPage extends StatefulWidget {
   const AdminPresensiPage({super.key});
-
   @override
   State<AdminPresensiPage> createState() => _AdminPresensiPageState();
 }
@@ -13,7 +12,6 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
   bool _loading = false;
   List<dynamic> _items = [];
   String _filterStatus = 'All'; // All, Pending, Disetujui, Ditolak
-
   @override
   void initState() {
     super.initState();
@@ -49,7 +47,6 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
     final fotoUrl = item['selfie'] != null && item['selfie'].isNotEmpty
         ? '$baseUrl/selfie/${item['selfie']}'
         : null;
-
     showDialog(
       context: context,
       builder: (context) => AnimatedPadding(
@@ -217,7 +214,8 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
   Future<void> _updateStatus(String id, String status) async {
     try {
       final res = await ApiService.updatePresensiStatus(id: id, status: status);
-      if (res['success'] == true || res['status'] == true) {
+      if (res['status'] == true) {
+        // Konsisten dengan PHP response
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(res['message'] ?? 'Status diperbarui'),
@@ -287,13 +285,11 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                         } else {
                           statusColor = Colors.orange;
                         }
-
                         final baseUrl = ApiService.baseUrl;
                         final fotoUrl =
                             item['selfie'] != null && item['selfie'].isNotEmpty
                             ? '$baseUrl/selfie/${item['selfie']}'
                             : null;
-
                         return Card(
                           elevation: 2,
                           shape: RoundedRectangleBorder(

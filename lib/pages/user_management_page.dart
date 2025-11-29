@@ -1,11 +1,10 @@
+// pages/user_management_page.dart (update handle response uniform)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
-// import '../api/api_html_adapter.dart';
 
 class UserManagementPage extends StatefulWidget {
   const UserManagementPage({super.key});
-
   @override
   State<UserManagementPage> createState() => _UserManagementPageState();
 }
@@ -13,7 +12,6 @@ class UserManagementPage extends StatefulWidget {
 class _UserManagementPageState extends State<UserManagementPage> {
   bool _isLoading = false;
   List<dynamic> _users = [];
-
   @override
   void initState() {
     super.initState();
@@ -43,7 +41,6 @@ class _UserManagementPageState extends State<UserManagementPage> {
       );
       return;
     }
-
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -61,9 +58,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
         ],
       ),
     );
-
     if (confirm != true) return;
-
     final res = await ApiService.deleteUser(id);
     ScaffoldMessenger.of(
       context,
@@ -75,7 +70,6 @@ class _UserManagementPageState extends State<UserManagementPage> {
     final usernameC = TextEditingController(text: user['username']);
     final namaC = TextEditingController(text: user['nama_lengkap']);
     final passwordC = TextEditingController(); // Baru untuk password
-
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
@@ -145,7 +139,6 @@ class _UserManagementPageState extends State<UserManagementPage> {
         );
       },
     );
-
     if (saved == true) {
       _loadUsers();
       ScaffoldMessenger.of(
@@ -157,7 +150,6 @@ class _UserManagementPageState extends State<UserManagementPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kelola User & Admin'),
@@ -175,7 +167,6 @@ class _UserManagementPageState extends State<UserManagementPage> {
                 itemBuilder: (ctx, index) {
                   final u = _users[index];
                   final role = (u['role'] ?? '').toString();
-
                   Color badgeColor;
                   String roleLabel;
                   switch (role) {
@@ -191,7 +182,6 @@ class _UserManagementPageState extends State<UserManagementPage> {
                       badgeColor = Colors.green;
                       roleLabel = 'USER';
                   }
-
                   return Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),

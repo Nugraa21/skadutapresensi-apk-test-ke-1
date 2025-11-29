@@ -1,13 +1,11 @@
+// pages/history_page.dart (update handle status dari data)
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
-// import '../api/api_html_adapter.dart';
 import '../models/user_model.dart';
 
 class HistoryPage extends StatefulWidget {
   final UserModel user;
-
   const HistoryPage({super.key, required this.user});
-
   @override
   State<HistoryPage> createState() => _HistoryPageState();
 }
@@ -16,7 +14,6 @@ class _HistoryPageState extends State<HistoryPage> {
   bool _loading = false;
   List<dynamic> _items = [];
   String _filterJenis = 'All'; // All, Masuk, Pulang, Izin, Pulang Cepat
-
   @override
   void initState() {
     super.initState();
@@ -114,7 +111,6 @@ class _HistoryPageState extends State<HistoryPage> {
                               if (status == 'Disetujui')
                                 statusColor = Colors.green;
                               if (status == 'Ditolak') statusColor = Colors.red;
-
                               return Card(
                                 elevation: 2,
                                 shape: RoundedRectangleBorder(

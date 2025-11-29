@@ -1,18 +1,17 @@
+// pages/admin_user_detail_page.dart (update handle response uniform, gunakan status dari data)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
-// import '../api/api_html_adapter.dart';
+import 'admin_user_detail_page.dart';
 
 class AdminUserDetailPage extends StatefulWidget {
   final String userId;
   final String userName;
-
   const AdminUserDetailPage({
     super.key,
     required this.userId,
     required this.userName,
   });
-
   @override
   State<AdminUserDetailPage> createState() => _AdminUserDetailPageState();
 }
@@ -23,7 +22,6 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
   bool _loading = false;
   List<dynamic> _history = [];
   List<dynamic> _pendingPresensi = [];
-
   @override
   void initState() {
     super.initState();
@@ -42,7 +40,6 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
     try {
       final historyData = await ApiService.getUserHistory(widget.userId);
       setState(() => _history = historyData ?? []);
-
       final allPresensi = await ApiService.getAllPresensi();
       final pending = allPresensi
           .where(
@@ -68,8 +65,8 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
       print('DEBUG UPDATE: Starting approve for ID=$id, status=$status');
       final res = await ApiService.updatePresensiStatus(id: id, status: status);
       print('DEBUG UPDATE: Full response received: ${jsonEncode(res)}');
-
-      if (res['success'] == true || res['status'] == true) {
+      if (res['status'] == true) {
+        // Konsisten
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(res['message'] ?? 'Status diperbarui'),
@@ -168,12 +165,10 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
           Color statusColor = Colors.orange;
           if (status == 'Disetujui') statusColor = Colors.green;
           if (status == 'Ditolak') statusColor = Colors.red;
-
           final baseUrl = ApiService.baseUrl;
           final fotoUrl = item['selfie'] != null && item['selfie'].isNotEmpty
               ? '$baseUrl/selfie/${item['selfie']}'
               : null;
-
           return Card(
             elevation: 2,
             shape: RoundedRectangleBorder(
@@ -293,7 +288,6 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
           final fotoUrl = item['selfie'] != null && item['selfie'].isNotEmpty
               ? '$baseUrl/selfie/${item['selfie']}'
               : null;
-
           return Card(
             elevation: 2,
             shape: RoundedRectangleBorder(

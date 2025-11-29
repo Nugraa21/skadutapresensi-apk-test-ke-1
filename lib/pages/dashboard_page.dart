@@ -1,15 +1,13 @@
+// pages/dashboard_page.dart (tetap sama)
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 
 class DashboardPage extends StatelessWidget {
   final UserModel user;
-
   const DashboardPage({super.key, required this.user});
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Dashboard'),

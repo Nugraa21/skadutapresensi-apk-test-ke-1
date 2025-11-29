@@ -1,12 +1,11 @@
+// pages/admin_user_list_page.dart (tetap sama, sudah OK)
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
-// import '../api/api_html_adapter.dart';
 import 'admin_user_detail_page.dart';
 
 class AdminUserListPage extends StatefulWidget {
   const AdminUserListPage({super.key});
-
   @override
   State<AdminUserListPage> createState() => _AdminUserListPageState();
 }
@@ -16,7 +15,6 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
   List<dynamic> _users = [];
   List<dynamic> _filteredUsers = [];
   final TextEditingController _searchC = TextEditingController();
-
   @override
   void initState() {
     super.initState();
@@ -177,7 +175,6 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
                               final username = u['username'] ?? '';
                               final nip = u['nip_nisn']?.toString() ?? '';
                               final userId = u['id']?.toString() ?? '';
-
                               return Card(
                                 elevation: 4,
                                 shape: RoundedRectangleBorder(

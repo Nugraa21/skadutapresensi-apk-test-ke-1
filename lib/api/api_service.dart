@@ -1,11 +1,9 @@
+// api/api_service.dart (update getAllPresensi ke absen_admin_list.php untuk konsistensi, handle response uniform)
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  // static const String baseUrl = "http://192.168.137.1/backendapk"; // smk yk
-  static const String baseUrl =
-      "http://10.10.77.132/backendapk/"; // gudang barat
-
+  static const String baseUrl = "http://10.10.77.132/backendapk";
   // LOGIN
   static Future<Map<String, dynamic>> login({
     required String input,
@@ -76,18 +74,6 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
-  // UPDATE PASSWORD TERPISAH
-  static Future<Map<String, dynamic>> updateUserPassword({
-    required String id,
-    required String newPassword,
-  }) async {
-    final res = await http.post(
-      Uri.parse("$baseUrl/update_password.php"),
-      body: {"id": id, "password": newPassword},
-    );
-    return jsonDecode(res.body);
-  }
-
   // PRESENSI SUBMIT
   static Future<Map<String, dynamic>> submitPresensi({
     required String userId,
@@ -106,16 +92,13 @@ class ApiService {
       "base64Image": base64Image,
     };
     print('DEBUG API: Request body: ${jsonEncode(body)}');
-
     final res = await http.post(
       Uri.parse("$baseUrl/absen.php"),
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: body,
     );
-
     print('DEBUG API: Status code: ${res.statusCode}');
     print('DEBUG API: Response body: ${res.body}');
-
     return jsonDecode(res.body);
   }
 
@@ -124,7 +107,6 @@ class ApiService {
     final res = await http.get(
       Uri.parse("$baseUrl/absen_history.php?user_id=$userId"),
     );
-
     final data = jsonDecode(res.body);
     if (data["status"] == true) {
       return data["data"] as List<dynamic>;
@@ -132,18 +114,17 @@ class ApiService {
     return [];
   }
 
-  // GET ALL PRESENSI (ADMIN)
+  // GET ALL PRESENSI (ADMIN) - Ganti ke absen_admin_list.php untuk konsistensi
   static Future<List<dynamic>> getAllPresensi() async {
-    final res = await http.get(Uri.parse("$baseUrl/presensi_rekap.php"));
+    final res = await http.get(Uri.parse("$baseUrl/absen_admin_list.php"));
     print('DEBUG API: Presensi response status: ${res.statusCode}');
     print(
       'DEBUG API: Presensi response body preview: ${res.body.substring(0, 200)}...',
     );
-
     try {
       final data = jsonDecode(res.body);
-      if (data is List) {
-        return data;
+      if (data["status"] == true) {
+        return data["data"] as List<dynamic>;
       } else if (data['error'] != null) {
         throw Exception('PHP Error: ${data['error']}');
       }
@@ -161,24 +142,20 @@ class ApiService {
   }) async {
     final body = {"id": id, "status": status};
     print('DEBUG API UPDATE: Request body: ${jsonEncode(body)}');
-
     final res = await http.post(
       Uri.parse("$baseUrl/presensi_approve.php"),
       headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: body,
     );
-
     print('DEBUG API UPDATE: Status code: ${res.statusCode}');
     print(
       'DEBUG API UPDATE: Response body raw: "${res.body}"',
     ); // Raw body untuk debug
-
     if (res.statusCode != 200) {
       throw Exception(
         'HTTP Error ${res.statusCode}: ${res.body}',
       ); // Fix: Include body in exception
     }
-
     try {
       final data = jsonDecode(res.body);
       print('DEBUG API UPDATE: Parsed JSON: ${jsonEncode(data)}');

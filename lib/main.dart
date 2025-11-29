@@ -1,10 +1,9 @@
+// main.dart
 import 'package:flutter/material.dart';
 import 'pages/login_page.dart';
 import 'pages/register_page.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/user_management_page.dart';
-import 'models/user_model.dart';
-
 // PAGE BARU PRESENSI
 import 'pages/presensi_page.dart';
 import 'pages/history_page.dart';
@@ -12,6 +11,7 @@ import 'pages/admin_presensi_page.dart';
 // PAGE BARU ADMIN USER
 import 'pages/admin_user_list_page.dart';
 import 'pages/admin_user_detail_page.dart';
+import 'models/user_model.dart';
 
 void main() {
   runApp(const SkadutaApp());
@@ -19,7 +19,6 @@ void main() {
 
 class SkadutaApp extends StatelessWidget {
   const SkadutaApp({super.key});
-
   @override
   Widget build(BuildContext context) {
     final theme = ThemeData(
@@ -28,7 +27,6 @@ class SkadutaApp extends StatelessWidget {
       scaffoldBackgroundColor: const Color(0xFFF5F5F5),
       appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
     );
-
     return MaterialApp(
       title: 'Skaduta Presensi',
       debugShowCheckedModeBanner: false,

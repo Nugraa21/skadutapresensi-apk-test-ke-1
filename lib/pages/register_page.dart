@@ -1,10 +1,9 @@
+// pages/register_page.dart (tetap sama)
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
-// import '../api/api_html_adapter.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
-
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
@@ -15,15 +14,12 @@ class _RegisterPageState extends State<RegisterPage> {
   final _namaC = TextEditingController();
   final _nipNisnC = TextEditingController();
   final _passwordC = TextEditingController();
-
   String _role = 'user';
   bool _isKaryawan = false;
   bool _isLoading = false;
   bool _obscure = true;
-
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
-
     setState(() => _isLoading = true);
     try {
       final res = await ApiService.register(
@@ -33,7 +29,6 @@ class _RegisterPageState extends State<RegisterPage> {
         password: _passwordC.text.trim(),
         role: _role,
       );
-
       if (res['status'] == 'success') {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -66,7 +61,6 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -392,3 +386,4 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 }
+// 
