@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = "http://10.10.77.132/backendapk";
+  static const String baseUrl =
+      "https://pseudosiphonal-tisha-unenvenomed.ngrok-free.dev/backendapk/";
   // LOGIN
   static Future<Map<String, dynamic>> login({
     required String input,

@@ -1,4 +1,6 @@
-const String baseUrl = "http://192.168.0.105/backendapk/"; // gudang barat
+// const String baseUrl = "http://192.168.0.105/backendapk/"; // gudang barat
+const String baseUrl =
+    "https://pseudosiphonal-tisha-unenvenomed.ngrok-free.dev/backendapk/"; // gudang barat
 // const String baseUrl = "http://192.168.137.1/backendapk"; // smk yk
 
 
