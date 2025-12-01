@@ -1,7 +1,6 @@
-// pages/presensi_page.dart (edited for cooler, attractive UI with glassmorphism transparency)
+// pages/presensi_page.dart (tetap sama)
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui'; // Added for BackdropFilter and ImageFilter
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:geolocator/geolocator.dart';
@@ -233,17 +232,12 @@ class _PresensiPageState extends State<PresensiPage> {
                             height: 40,
                             child: Container(
                               decoration: BoxDecoration(
-                                gradient: RadialGradient(
-                                  colors: [
-                                    cs.primary,
-                                    cs.primary.withOpacity(0.8),
-                                  ],
-                                ),
                                 shape: BoxShape.circle,
+                                color: cs.primary,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: cs.primary.withOpacity(0.4),
-                                    blurRadius: 12,
+                                    color: cs.primary.withOpacity(0.3),
+                                    blurRadius: 8,
                                   ),
                                 ],
                               ),
@@ -263,20 +257,14 @@ class _PresensiPageState extends State<PresensiPage> {
                             height: 40,
                             child: Container(
                               decoration: BoxDecoration(
-                                gradient: RadialGradient(
-                                  colors: [
-                                    isInRadius ? Colors.green : Colors.red,
-                                    (isInRadius ? Colors.green : Colors.red)
-                                        .withOpacity(0.8),
-                                  ],
-                                ),
                                 shape: BoxShape.circle,
+                                color: isInRadius ? Colors.green : Colors.red,
                                 boxShadow: [
                                   BoxShadow(
                                     color:
                                         (isInRadius ? Colors.green : Colors.red)
-                                            .withOpacity(0.4),
-                                    blurRadius: 12,
+                                            .withOpacity(0.3),
+                                    blurRadius: 8,
                                   ),
                                 ],
                               ),
@@ -299,7 +287,7 @@ class _PresensiPageState extends State<PresensiPage> {
                               LatLng(sekolahLat + 0.001, sekolahLng + 0.001),
                               LatLng(sekolahLat + 0.001, sekolahLng - 0.001),
                             ],
-                            color: cs.primary.withOpacity(0.15),
+                            color: cs.primary.withOpacity(0.2),
                             borderColor: cs.primary,
                             borderStrokeWidth: 2,
                           ),
@@ -324,7 +312,7 @@ class _PresensiPageState extends State<PresensiPage> {
                     ),
                   ),
                 ),
-                // 📱 DRAGGABLE SHEET FOR FORM (Bottom popup) - with glassmorphism transparency
+                // 📱 DRAGGABLE SHEET FOR FORM (Bottom popup) - with smoother physics
                 DraggableScrollableSheet(
                   controller: _sheetController,
                   initialChildSize: _initialSheetSize,
@@ -333,83 +321,50 @@ class _PresensiPageState extends State<PresensiPage> {
                   snap: true,
                   snapSizes: const [0.45, 0.95],
                   builder: (context, scrollController) {
-                    return ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(24),
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(24),
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 25,
+                            offset: const Offset(0, -8),
+                          ),
+                        ],
                       ),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.white.withOpacity(0.2),
-                                Colors.white.withOpacity(0.05),
-                              ],
-                            ),
-                            borderRadius: const BorderRadius.vertical(
-                              top: Radius.circular(24),
-                            ),
-                            border: Border(
-                              top: BorderSide(
-                                color: Colors.white.withOpacity(0.3),
-                                width: 1,
+                      child: SingleChildScrollView(
+                        controller: scrollController,
+                        physics: const ClampingScrollPhysics(),
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          children: [
+                            // Handle bar for drag - cooler design
+                            Container(
+                              margin: const EdgeInsets.symmetric(vertical: 8),
+                              height: 5,
+                              width: 50,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                borderRadius: BorderRadius.circular(3),
                               ),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 30,
-                                offset: const Offset(0, -10),
-                              ),
+                            _buildRadiusCard(jarak, isInRadius, progress, cs),
+                            const SizedBox(height: 20),
+                            _buildJenisDropdown(cs),
+                            const SizedBox(height: 20),
+                            if (_jenis == 'Izin' ||
+                                _jenis == 'Pulang Cepat') ...[
+                              _buildKeterangan(cs),
+                              const SizedBox(height: 20),
                             ],
-                          ),
-                          child: SingleChildScrollView(
-                            controller: scrollController,
-                            physics: const ClampingScrollPhysics(),
-                            padding: const EdgeInsets.all(20.0),
-                            child: Column(
-                              children: [
-                                // Handle bar for drag - cooler gradient design
-                                Container(
-                                  margin: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                  ),
-                                  height: 5,
-                                  width: 50,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        Colors.grey[300]!,
-                                        Colors.grey[400]!,
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                ),
-                                _buildRadiusCard(
-                                  jarak,
-                                  isInRadius,
-                                  progress,
-                                  cs,
-                                ),
-                                const SizedBox(height: 20),
-                                _buildJenisDropdown(cs),
-                                const SizedBox(height: 20),
-                                if (_jenis == 'Izin' ||
-                                    _jenis == 'Pulang Cepat') ...[
-                                  _buildKeterangan(cs),
-                                  const SizedBox(height: 20),
-                                ],
-                                _buildSelfie(cs),
-                                const SizedBox(height: 28),
-                                _buildSubmitButtons(cs),
-                                const SizedBox(height: 30), // Extra space
-                              ],
-                            ),
-                          ),
+                            _buildSelfie(cs),
+                            const SizedBox(height: 28),
+                            _buildSubmitButtons(cs),
+                            const SizedBox(height: 30), // Extra space
+                          ],
                         ),
                       ),
                     );
@@ -420,17 +375,17 @@ class _PresensiPageState extends State<PresensiPage> {
     );
   }
 
-  // ================== UPDATED WIDGETS WITH GLASSMORPHISM (transparent cards) ==================
+  // ================== WIDGETS WITH LIGHT GLASSMORPHISM ==================
   BoxDecoration _glassDecoration() {
     return BoxDecoration(
-      color: Colors.white.withOpacity(0.25),
+      color: Colors.white,
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: Colors.white.withOpacity(0.4)),
+      border: Border.all(color: Colors.grey[200]!),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.08),
-          blurRadius: 15,
-          offset: const Offset(0, 6),
+          color: Colors.black.withOpacity(0.04),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
         ),
       ],
     );
@@ -442,312 +397,205 @@ class _PresensiPageState extends State<PresensiPage> {
     double progress,
     ColorScheme cs,
   ) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: Container(
-          width: double.infinity,
-          decoration: _glassDecoration(),
-          padding: const EdgeInsets.all(20),
-          child: Column(
+    return Container(
+      width: double.infinity,
+      decoration: _glassDecoration(),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: RadialGradient(
-                        colors: [
-                          (isInRadius ? Colors.green : Colors.red).withOpacity(
-                            0.2,
-                          ),
-                          (isInRadius ? Colors.green : Colors.red).withOpacity(
-                            0.1,
-                          ),
-                        ],
-                      ),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isInRadius ? Colors.green : Colors.red,
-                        width: 2,
-                      ),
-                    ),
-                    child: Icon(
-                      isInRadius ? Icons.check_circle : Icons.cancel,
-                      color: isInRadius ? Colors.green : Colors.red,
-                      size: 28,
-                    ),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: (isInRadius ? Colors.green : Colors.red).withOpacity(
+                    0.1,
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          isInRadius ? 'Dalam Area Sekolah' : 'Di Luar Area',
-                          style: const TextStyle(
-                            color: Colors.black87,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 18,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Jarak: ${jarak.toStringAsFixed(1)} m',
-                          style: TextStyle(color: Colors.black54, fontSize: 14),
-                        ),
-                      ],
-                    ),
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: isInRadius ? Colors.green : Colors.red,
+                    width: 2,
                   ),
-                ],
+                ),
+                child: Icon(
+                  isInRadius ? Icons.check_circle : Icons.cancel,
+                  color: isInRadius ? Colors.green : Colors.red,
+                  size: 28,
+                ),
               ),
-              // Uncommented and styled progress bar for cooler look
-              const SizedBox(height: 16),
-              Stack(
-                children: [
-                  Container(
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                  FractionallySizedBox(
-                    widthFactor: progress,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 500),
-                      curve: Curves.easeInOut,
-                      height: 6,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [
-                            isInRadius ? Colors.green : Colors.red,
-                            (isInRadius ? Colors.green : Colors.red)
-                                .withOpacity(0.6),
-                          ],
-                        ),
-                        borderRadius: BorderRadius.circular(3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: (isInRadius ? Colors.green : Colors.red)
-                                .withOpacity(0.3),
-                            blurRadius: 4,
-                          ),
-                        ],
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isInRadius ? 'Dalam Area Sekolah' : 'Di Luar Area',
+                      style: const TextStyle(
+                        color: Colors.black87,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    Text(
+                      'Jarak: ${jarak.toStringAsFixed(1)} m',
+                      style: TextStyle(color: Colors.black54, fontSize: 14),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
-        ),
+          // progress bar
+          // const SizedBox(height: 16),
+          // SizedBox(
+          // height: 6,
+          // child: ClipRRect(
+          // borderRadius: BorderRadius.circular(4),
+          // child: LinearProgressIndicator(
+          // value: progress,
+          // backgroundColor: Colors.grey[200],
+          // valueColor: AlwaysStoppedAnimation<Color>(
+          // isInRadius ? Colors.green : Colors.red,
+          // ),
+          // ),
+          // ),
+          // ),
+        ],
       ),
     );
   }
 
   Widget _buildJenisDropdown(ColorScheme cs) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: Container(
-          decoration: _glassDecoration(),
-          padding: const EdgeInsets.all(8),
-          child: DropdownButtonFormField<String>(
-            value: _jenis,
-            decoration: InputDecoration(
-              labelText: 'Jenis Presensi',
-              labelStyle: const TextStyle(color: Colors.black54),
-              prefixIcon: Icon(Icons.category, color: cs.primary),
-              border: InputBorder.none,
-              filled: true,
-              fillColor: Colors.transparent,
-            ),
-            dropdownColor: Colors.white.withOpacity(0.9),
-            style: const TextStyle(color: Colors.black87),
-            iconEnabledColor: cs.primary,
-            items: [
-              DropdownMenuItem(
-                value: 'Masuk',
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.green,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.login,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text('Absen Masuk'),
-                  ],
-                ),
-              ),
-              DropdownMenuItem(
-                value: 'Pulang',
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.orange,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.logout,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text('Absen Pulang'),
-                  ],
-                ),
-              ),
-              DropdownMenuItem(
-                value: 'Izin',
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.red,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.block,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text('Izin / Tidak Hadir'),
-                  ],
-                ),
-              ),
-              DropdownMenuItem(
-                value: 'Pulang Cepat',
-                child: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: const BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.fast_forward,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text('Pulang Cepat'),
-                  ],
-                ),
-              ),
-            ],
-            onChanged: (v) {
-              if (v != null) {
-                setState(() {
-                  _jenis = v;
-                  if (v == 'Masuk' || v == 'Pulang') {
-                    _ketC.clear();
-                  }
-                });
-              }
-            },
-          ),
+    return Container(
+      decoration: _glassDecoration(),
+      padding: const EdgeInsets.all(8),
+      child: DropdownButtonFormField<String>(
+        value: _jenis,
+        decoration: InputDecoration(
+          labelText: 'Jenis Presensi',
+          labelStyle: const TextStyle(color: Colors.black54),
+          prefixIcon: Icon(Icons.category, color: cs.primary),
+          border: InputBorder.none,
+          filled: true,
+          fillColor: Colors.transparent,
         ),
+        dropdownColor: Colors.white,
+        style: const TextStyle(color: Colors.black87),
+        iconEnabledColor: cs.primary,
+        items: [
+          DropdownMenuItem(
+            value: 'Masuk',
+            child: Row(
+              children: [
+                Icon(Icons.login, color: Colors.green),
+                const SizedBox(width: 12),
+                const Text('Absen Masuk'),
+              ],
+            ),
+          ),
+          DropdownMenuItem(
+            value: 'Pulang',
+            child: Row(
+              children: [
+                Icon(Icons.logout, color: Colors.orange),
+                const SizedBox(width: 12),
+                const Text('Absen Pulang'),
+              ],
+            ),
+          ),
+          DropdownMenuItem(
+            value: 'Izin',
+            child: Row(
+              children: [
+                Icon(Icons.block, color: Colors.red),
+                const SizedBox(width: 12),
+                const Text('Izin / Tidak Hadir'),
+              ],
+            ),
+          ),
+          DropdownMenuItem(
+            value: 'Pulang Cepat',
+            child: Row(
+              children: [
+                Icon(Icons.fast_forward, color: Colors.blue),
+                const SizedBox(width: 12),
+                const Text('Pulang Cepat'),
+              ],
+            ),
+          ),
+        ],
+        onChanged: (v) {
+          if (v != null) {
+            setState(() {
+              _jenis = v;
+              if (v == 'Masuk' || v == 'Pulang') {
+                _ketC.clear();
+              }
+            });
+          }
+        },
       ),
     );
   }
 
   Widget _buildKeterangan(ColorScheme cs) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: Container(
-          decoration: _glassDecoration(),
-          padding: const EdgeInsets.all(16),
-          child: TextField(
-            controller: _ketC,
-            maxLines: 3,
-            style: const TextStyle(color: Colors.black87),
-            decoration: InputDecoration(
-              labelText: 'Keterangan (alasan)',
-              labelStyle: const TextStyle(color: Colors.black54),
-              helperText: 'Wajib diisi untuk jenis ini',
-              helperStyle: const TextStyle(color: Colors.black54),
-              border: InputBorder.none,
-              prefixIcon: Icon(Icons.note, color: cs.primary),
-              filled: true,
-              fillColor: Colors.transparent,
-            ),
-          ),
+    return Container(
+      decoration: _glassDecoration(),
+      padding: const EdgeInsets.all(16),
+      child: TextField(
+        controller: _ketC,
+        maxLines: 3,
+        style: const TextStyle(color: Colors.black87),
+        decoration: InputDecoration(
+          labelText: 'Keterangan (alasan)',
+          labelStyle: const TextStyle(color: Colors.black54),
+          helperText: 'Wajib diisi untuk jenis ini',
+          helperStyle: const TextStyle(color: Colors.black54),
+          border: InputBorder.none,
+          prefixIcon: Icon(Icons.note, color: cs.primary),
+          filled: true,
+          fillColor: Colors.transparent,
         ),
       ),
     );
   }
 
   Widget _buildSelfie(ColorScheme cs) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-        child: Container(
-          decoration: _glassDecoration(),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              OutlinedButton.icon(
-                onPressed: _pickSelfie,
-                style: OutlinedButton.styleFrom(
-                  side: BorderSide(
-                    color: cs.primary.withOpacity(0.8),
-                    width: 2,
-                  ),
-                  foregroundColor: cs.primary,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 12,
-                    horizontal: 16,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                icon: Icon(Icons.camera_alt_outlined, color: cs.primary),
-                label: Text(
-                  'Ambil Selfie (Opsional)',
-                  style: TextStyle(
-                    color: cs.primary,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+    return Container(
+      decoration: _glassDecoration(),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          OutlinedButton.icon(
+            onPressed: _pickSelfie,
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: cs.primary, width: 2),
+              foregroundColor: cs.primary,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              if (_selfieFile != null) ...[
-                const SizedBox(height: 16),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Image.file(
-                    _selfieFile!,
-                    height: 200,
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                  ),
-                ),
-              ],
-            ],
+            ),
+            icon: Icon(Icons.camera_alt_outlined, color: cs.primary),
+            label: Text(
+              'Ambil Selfie (Opsional)',
+              style: TextStyle(color: cs.primary),
+            ),
           ),
-        ),
+          if (_selfieFile != null) ...[
+            const SizedBox(height: 16),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: Image.file(
+                _selfieFile!,
+                height: 200,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -773,10 +621,7 @@ class _PresensiPageState extends State<PresensiPage> {
                   : Icon(Icons.send, color: Colors.white),
               label: Text(
                 _loading ? 'Mengirim...' : 'Kirim Presensi',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: const TextStyle(color: Colors.white),
               ),
               style: FilledButton.styleFrom(
                 backgroundColor: cs.primary,
@@ -785,32 +630,25 @@ class _PresensiPageState extends State<PresensiPage> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                 ),
-                elevation: 0,
-                shadowColor: cs.primary.withOpacity(0.3),
+                elevation: 3,
               ),
             ),
           ),
         ),
         const SizedBox(width: 12),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(12),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.3),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                onPressed: _resetForm,
-                icon: Icon(Icons.refresh, color: cs.primary),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.transparent,
-                  padding: const EdgeInsets.all(12),
-                ),
-                tooltip: 'Reset Form',
-              ),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: IconButton(
+            onPressed: _resetForm,
+            icon: Icon(Icons.refresh, color: cs.primary),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              padding: const EdgeInsets.all(12),
             ),
+            tooltip: 'Reset Form',
           ),
         ),
       ],
