@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 
 class ApiService {
   static const String baseUrl =
-      "https://pseudosiphonal-tisha-unenvenomed.ngrok-free.dev/backendapk/"; // api ngrok dan harus di ganti saat restart server
+      "http://10.10.70.255/backendapk/"; // api ngrok dan harus di ganti saat restart server
   // LOGIN
   static Future<Map<String, dynamic>> login({
     required String input,
