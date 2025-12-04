@@ -58,6 +58,10 @@ dependencies:
   # geolocator: ^12.0.0
   # image_picker: ^1.0.7
   google_maps_flutter: ^2.7.0
+  excel: ^4.0.3
+  path_provider: ^2.1.1
+  # permission_handler: ^11.0.0
+  open_file: ^3.3.2   # biar langsung buka file setelah download
   # ========================================================
 
 dev_dependencies:

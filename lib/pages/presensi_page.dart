@@ -1,5 +1,5 @@
 // pages/presensi_page.dart
-// VERSI FINAL – IZIN TANPA LOKASI, TOMBOL JELAS, POPUP SUKSES + AUTO BACK
+// VERSI FINAL – WAJIB SELFIE UNTUK MASUK/PULANG/PULANG CEPAT, WAJIB DOKUMEN UNTUK IZIN
 
 import 'dart:convert';
 import 'dart:io';
@@ -38,10 +38,10 @@ class _PresensiPageState extends State<PresensiPage>
   bool _loading = false;
   final ImagePicker _picker = ImagePicker();
 
-  // Koordinat sekolah (hanya dipakai untuk Masuk & Pulang)
+  // Koordinat sekolah
   static const double sekolahLat = -7.7771639173358516;
   static const double sekolahLng = 110.36716347232226;
-  static const double maxRadius = 140; // meter
+  static const double maxRadius = 200; // meter
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -61,10 +61,7 @@ class _PresensiPageState extends State<PresensiPage>
     ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeOut));
     _pulseController.repeat();
 
-    // Hanya ambil lokasi jika Masuk atau Pulang
-    if (_isMapNeeded) {
-      _initLocation();
-    }
+    if (_isMapNeeded) _initLocation();
   }
 
   @override
@@ -75,31 +72,25 @@ class _PresensiPageState extends State<PresensiPage>
     super.dispose();
   }
 
-  // ========== JENIS PRESENSI ==========
+  bool get _isMapNeeded => _jenis == 'Masuk' || _jenis == 'Pulang';
   bool get _isPenugasan => _jenis.startsWith('Penugasan');
   bool get _isIzin => _jenis == 'Izin';
-  bool get _isMapNeeded =>
-      _jenis == 'Masuk' || _jenis == 'Pulang'; // Hanya Masuk & Pulang butuh map
+  bool get _isPulangCepat => _jenis == 'Pulang Cepat';
 
-  // ========== LOKASI (Hanya untuk Masuk & Pulang) ==========
+  // ========== LOKASI ==========
   Future<void> _initLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      _showSnack('Location service mati, nyalakan dulu ya');
-      return;
-    }
+    if (!serviceEnabled)
+      return _showSnack('Location service mati, nyalakan dulu ya');
 
     LocationPermission perm = await Geolocator.checkPermission();
     if (perm == LocationPermission.denied) {
       perm = await Geolocator.requestPermission();
-      if (perm == LocationPermission.denied) {
-        _showSnack('Izin lokasi ditolak');
-        return;
-      }
+      if (perm == LocationPermission.denied)
+        return _showSnack('Izin lokasi ditolak');
     }
     if (perm == LocationPermission.deniedForever) {
-      _showSnack('Izin lokasi ditolak permanen');
-      return;
+      return _showSnack('Izin lokasi ditolak permanen');
     }
 
     try {
@@ -127,7 +118,7 @@ class _PresensiPageState extends State<PresensiPage>
     final img = await _picker.pickImage(
       source: ImageSource.camera,
       preferredCameraDevice: CameraDevice.front,
-      imageQuality: 75,
+      imageQuality: 80,
     );
     if (img != null) setState(() => _selfieFile = File(img.path));
   }
@@ -135,35 +126,42 @@ class _PresensiPageState extends State<PresensiPage>
   Future<void> _pickDokumen() async {
     final doc = await _picker.pickImage(
       source: ImageSource.gallery,
-      imageQuality: 75,
+      imageQuality: 80,
     );
     if (doc != null) setState(() => _dokumenFile = File(doc.path));
   }
 
-  // ========== SUBMIT PRESENSI ==========
+  // ========== SUBMIT ==========
   Future<void> _submitPresensi() async {
-    // Validasi lokasi hanya untuk Masuk & Pulang
+    // Validasi lokasi untuk Masuk & Pulang
     if (_isMapNeeded) {
       if (_position == null) return _showSnack('Lokasi belum terdeteksi');
       final jarak = _distanceToSchool();
       if (jarak > maxRadius) {
         return _showSnack(
-          'Kamu di luar radius sekolah (±${jarak.toStringAsFixed(1)}m)',
+          'Di luar radius sekolah (±${jarak.toStringAsFixed(1)}m)',
         );
       }
     }
 
-    // Validasi keterangan
-    if ((_jenis == 'Izin' || _jenis == 'Pulang Cepat') &&
-        _ketC.text.trim().isEmpty) {
-      return _showSnack('Keterangan wajib diisi!');
+    // WAJIB SELFIE untuk Masuk, Pulang, Pulang Cepat
+    if (_jenis == 'Masuk' || _jenis == 'Pulang' || _jenis == 'Pulang Cepat') {
+      if (_selfieFile == null) return _showSnack('Selfie wajib diambil!');
     }
 
-    // Validasi penugasan
+    // WAJIB DOKUMEN untuk Izin
+    if (_isIzin) {
+      if (_dokumenFile == null) return _showSnack('Bukti izin wajib diunggah!');
+      if (_ketC.text.trim().isEmpty)
+        return _showSnack('Keterangan wajib diisi!');
+    }
+
+    // WAJIB DOKUMEN + INFO untuk Penugasan
     if (_isPenugasan) {
       if (_infoC.text.trim().isEmpty)
         return _showSnack('Informasi penugasan wajib diisi!');
-      if (_dokumenFile == null) return _showSnack('Dokumen wajib diunggah!');
+      if (_dokumenFile == null)
+        return _showSnack('Dokumen penugasan wajib diunggah!');
     }
 
     setState(() => _loading = true);
@@ -196,7 +194,6 @@ class _PresensiPageState extends State<PresensiPage>
     }
   }
 
-  // ========== POPUP SUKSES + AUTO KEMBALI ==========
   void _showSuccessDialog() {
     showDialog(
       context: context,
@@ -250,12 +247,11 @@ class _PresensiPageState extends State<PresensiPage>
       ),
     );
 
-    // Otomatis kembali ke menu setelah 2.2 detik
     Future.delayed(const Duration(milliseconds: 2200), () {
       if (mounted) {
         Navigator.of(context)
-          ..pop() // tutup dialog
-          ..pop(); // kembali ke halaman sebelumnya
+          ..pop()
+          ..pop();
       }
     });
   }
@@ -264,7 +260,7 @@ class _PresensiPageState extends State<PresensiPage>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w600)),
-        backgroundColor: msg.contains('berhasil') || msg.contains('SUKSES')
+        backgroundColor: msg.contains('berhasil')
             ? Colors.green.shade600
             : Colors.red.shade600,
         behavior: SnackBarBehavior.floating,
@@ -274,7 +270,7 @@ class _PresensiPageState extends State<PresensiPage>
     );
   }
 
-  // ========== MAP CANTIK (Hanya untuk Masuk & Pulang) ==========
+  // ========== MAP ==========
   Widget _buildMap() {
     final jarak = _distanceToSchool();
     final inRadius = jarak <= maxRadius;
@@ -302,8 +298,6 @@ class _PresensiPageState extends State<PresensiPage>
                     ? lat_lng.LatLng(_position!.latitude, _position!.longitude)
                     : lat_lng.LatLng(sekolahLat, sekolahLng),
                 initialZoom: 17.8,
-                maxZoom: 19,
-                crs: const Epsg3857(),
               ),
               children: [
                 TileLayer(
@@ -544,10 +538,9 @@ class _PresensiPageState extends State<PresensiPage>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Judul
                       Text(
                         _jenis == 'Masuk'
-                            ? 'Selamat Pagi!'
+                            ? 'Selamat Datang!'
                             : _jenis == 'Pulang'
                             ? 'Selamat Pulang!'
                             : _jenis == 'Izin'
@@ -569,14 +562,13 @@ class _PresensiPageState extends State<PresensiPage>
                       ),
                       const SizedBox(height: 30),
 
-                      // Map hanya untuk Masuk & Pulang
                       if (_isMapNeeded) ...[
                         _buildMap(),
                         const SizedBox(height: 30),
                       ],
 
-                      // Form Izin / Pulang Cepat
-                      if (_jenis == 'Izin' || _jenis == 'Pulang Cepat') ...[
+                      // KETERANGAN (Izin & Pulang Cepat)
+                      if (_isIzin || _isPulangCepat)
                         _buildTextField(
                           _ketC,
                           'Keterangan / Alasan',
@@ -584,11 +576,10 @@ class _PresensiPageState extends State<PresensiPage>
                           Icons.note_alt_rounded,
                           cs,
                         ),
-                        const SizedBox(height: 20),
-                      ],
+                      if (_isIzin || _isPulangCepat) const SizedBox(height: 20),
 
-                      // Form Penugasan
-                      if (_isPenugasan) ...[
+                      // INFORMASI PENUGASAN
+                      if (_isPenugasan)
                         _buildTextField(
                           _infoC,
                           'Informasi Penugasan',
@@ -597,20 +588,38 @@ class _PresensiPageState extends State<PresensiPage>
                           cs,
                           maxLines: 5,
                         ),
+                      if (_isPenugasan) const SizedBox(height: 20),
+
+                      // SELFIE (WAJIB untuk Masuk/Pulang/Pulang Cepat)
+                      if (_jenis == 'Masuk' ||
+                          _jenis == 'Pulang' ||
+                          _jenis == 'Pulang Cepat')
+                        _buildImagePicker(
+                          'Ambil Selfie (Wajib)',
+                          _selfieFile,
+                          _pickSelfie,
+                          Icons.camera_alt_rounded,
+                          cs,
+                          required: true,
+                        ),
+                      if (_jenis == 'Masuk' ||
+                          _jenis == 'Pulang' ||
+                          _jenis == 'Pulang Cepat')
                         const SizedBox(height: 20),
-                      ],
 
-                      // Selfie
-                      _buildImagePicker(
-                        'Ambil Selfie (Opsional)',
-                        _selfieFile,
-                        _pickSelfie,
-                        Icons.camera_alt_rounded,
-                        cs,
-                      ),
-                      const SizedBox(height: 20),
+                      // DOKUMEN BUKTI IZIN (WAJIB untuk Izin)
+                      if (_isIzin)
+                        _buildImagePicker(
+                          'Unggah Bukti Izin (Wajib)',
+                          _dokumenFile,
+                          _pickDokumen,
+                          Icons.file_present_rounded,
+                          cs,
+                          required: true,
+                        ),
+                      if (_isIzin) const SizedBox(height: 20),
 
-                      // Dokumen Penugasan
+                      // DOKUMEN PENUGASAN
                       if (_isPenugasan)
                         _buildImagePicker(
                           'Unggah Surat Tugas / Dokumen (Wajib)',
@@ -623,7 +632,7 @@ class _PresensiPageState extends State<PresensiPage>
 
                       const SizedBox(height: 30),
 
-                      // Tombol Kirim – Teks JELAS BANGET
+                      // TOMBOL KIRIM
                       SizedBox(
                         height: 64,
                         child: ElevatedButton.icon(
@@ -648,7 +657,6 @@ class _PresensiPageState extends State<PresensiPage>
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: cs.primary,
-                            foregroundColor: Colors.white,
                             elevation: 12,
                             shadowColor: cs.primary.withOpacity(0.5),
                             shape: RoundedRectangleBorder(
