@@ -1,4 +1,6 @@
-// pages/register_page.dart (UPDATED: Larger fonts, high contrast)
+// pages/register_page.dart
+// VERSI FINAL – FIX DROPDOWN BUG + TAMPILAN SUPER PREMIUM & RESPONSIVE
+
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
 
@@ -14,30 +16,36 @@ class _RegisterPageState extends State<RegisterPage> {
   final _namaC = TextEditingController();
   final _nipNisnC = TextEditingController();
   final _passwordC = TextEditingController();
+
   String _role = 'user';
-  bool _isKaryawan = false; // Controls NIP requirement
+  bool _isKaryawan = false;
   bool _isLoading = false;
   bool _obscure = true;
+
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _isLoading = true);
     try {
       final res = await ApiService.register(
         username: _usernameC.text.trim(),
         namaLengkap: _namaC.text.trim(),
-        nipNisn: _isKaryawan ? '' : _nipNisnC.text.trim(), // Empty if karyawan
+        nipNisn: _isKaryawan ? '' : _nipNisnC.text.trim(),
         password: _passwordC.text.trim(),
         role: _role,
-        isKaryawan: _isKaryawan, // NEW: Send to PHP
+        isKaryawan: _isKaryawan,
       );
+
+      if (!mounted) return;
+
       if (res['status'] == 'success') {
-        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text(
-              'Registrasi berhasil, silakan login',
-              style: TextStyle(fontSize: 18),
+              'Registrasi berhasil! Silakan login',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+            backgroundColor: Colors.green,
           ),
         );
         Navigator.pop(context);
@@ -45,7 +53,7 @@ class _RegisterPageState extends State<RegisterPage> {
         _showSnack(res['message'] ?? 'Gagal mendaftar');
       }
     } catch (e) {
-      _showSnack('Terjadi error: $e');
+      _showSnack('Terjadi kesalahan: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -53,7 +61,15 @@ class _RegisterPageState extends State<RegisterPage> {
 
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg, style: const TextStyle(fontSize: 18))),
+      SnackBar(
+        content: Text(
+          msg,
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: Colors.red.shade600,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
   }
 
@@ -69,17 +85,21 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Daftar Akun', style: TextStyle(fontSize: 22)),
-        elevation: 0,
+        title: const Text(
+          'Daftar Akun Baru',
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: Colors.transparent,
+        elevation: 0,
         foregroundColor: Colors.white,
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [cs.primary, cs.primary.withOpacity(0.8)],
+              colors: [cs.primary, cs.primary.withOpacity(0.85)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -87,207 +107,168 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
       ),
       body: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [
-              cs.surfaceVariant.withOpacity(0.5),
-              cs.surface,
-              cs.surfaceVariant.withOpacity(0.3),
-            ],
+            colors: [cs.primary.withOpacity(0.1), Colors.white],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
         child: SafeArea(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 500),
-                child: Column(
-                  children: [
-                    // Header with icon
-                    Hero(
-                      tag: 'register_header',
-                      child: Container(
-                        padding: const EdgeInsets.all(24),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [cs.primary, cs.secondary],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                          boxShadow: [
-                            BoxShadow(
-                              color: cs.primary.withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Buat Akun Baru',
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              'Bergabunglah dengan Skaduta Presensi',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
-                        ),
+            padding: const EdgeInsets.fromLTRB(24, 20, 24, 40),
+            child: Column(
+              children: [
+                // Header
+                Card(
+                  elevation: 12,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [cs.primary, cs.primary.withOpacity(0.8)],
                       ),
+                      borderRadius: BorderRadius.circular(24),
                     ),
-                    const SizedBox(height: 24),
-                    Card(
-                      elevation: 8,
-                      shadowColor: cs.primary.withOpacity(0.2),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          gradient: LinearGradient(
-                            colors: [Colors.white, cs.surface.withOpacity(0.5)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                    child: const Column(
+                      children: [
+                        Icon(
+                          Icons.school_rounded,
+                          size: 80,
+                          color: Colors.white,
+                        ),
+                        SizedBox(height: 16),
+                        Text(
+                          'Skaduta Presensi',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
-                        padding: const EdgeInsets.all(24),
-                        child: Form(
-                          key: _formKey,
-                          child: Column(
-                            children: [
-                              TextFormField(
-                                controller: _usernameC,
-                                decoration: InputDecoration(
-                                  labelText: 'Username',
-                                  prefixIcon: Icon(
-                                    Icons.person_outline,
-                                    color: cs.primary,
-                                    size: 32,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white.withOpacity(0.7),
-                                  labelStyle: const TextStyle(fontSize: 18),
-                                ),
-                                style: const TextStyle(fontSize: 18),
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty) {
-                                    return 'Username wajib diisi';
-                                  }
-                                  return null;
-                                },
+                        Text(
+                          'Sistem Absensi Digital Sekolah',
+                          style: TextStyle(fontSize: 18, color: Colors.white70),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Form Card
+                Card(
+                  elevation: 10,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(28),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          // Username
+                          TextFormField(
+                            controller: _usernameC,
+                            textInputAction: TextInputAction.next,
+                            decoration: _inputDecoration(
+                              'Username',
+                              Icons.person_outline,
+                              cs,
+                            ),
+                            style: const TextStyle(fontSize: 18),
+                            validator: (v) => v?.trim().isEmpty == true
+                                ? 'Username wajib diisi'
+                                : null,
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Nama Lengkap
+                          TextFormField(
+                            controller: _namaC,
+                            textInputAction: TextInputAction.next,
+                            decoration: _inputDecoration(
+                              'Nama Lengkap',
+                              Icons.badge_outlined,
+                              cs,
+                            ),
+                            style: const TextStyle(fontSize: 18),
+                            validator: (v) => v?.trim().isEmpty == true
+                                ? 'Nama wajib diisi'
+                                : null,
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Checkbox Karyawan
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade50,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: cs.primary.withOpacity(0.3),
                               ),
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _namaC,
-                                decoration: InputDecoration(
-                                  labelText: 'Nama Lengkap',
-                                  prefixIcon: Icon(
-                                    Icons.badge_outlined,
-                                    color: cs.primary,
-                                    size: 32,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white.withOpacity(0.7),
-                                  labelStyle: const TextStyle(fontSize: 18),
-                                ),
-                                style: const TextStyle(fontSize: 18),
-                                validator: (v) {
-                                  if (v == null || v.trim().isEmpty) {
-                                    return 'Nama wajib diisi';
-                                  }
-                                  return null;
-                                },
-                              ),
-                              const SizedBox(height: 16),
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.7),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: cs.primary.withOpacity(0.2),
-                                  ),
-                                ),
-                                child: CheckboxListTile(
-                                  value: _isKaryawan,
-                                  onChanged: (val) {
-                                    setState(() => _isKaryawan = val ?? false);
-                                  },
-                                  title: const Text(
-                                    'Saya Karyawan',
-                                    style: TextStyle(fontSize: 18),
-                                  ),
-                                  subtitle: const Text(
-                                    'Jika karyawan, NIP/NISN boleh dikosongkan',
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                  controlAffinity:
-                                      ListTileControlAffinity.leading,
-                                  contentPadding: EdgeInsets.zero,
-                                  dense: true,
+                            ),
+                            child: CheckboxListTile(
+                              value: _isKaryawan,
+                              onChanged: (val) =>
+                                  setState(() => _isKaryawan = val ?? false),
+                              title: const Text(
+                                'Saya Karyawan / Guru',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
-                              if (!_isKaryawan) ...[
-                                const SizedBox(height: 8),
-                                TextFormField(
-                                  controller: _nipNisnC,
-                                  decoration: InputDecoration(
-                                    labelText: 'NIP / NISN',
-                                    prefixIcon: Icon(
-                                      Icons.credit_card_outlined,
-                                      color: cs.primary,
-                                      size: 32,
-                                    ),
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.white.withOpacity(0.7),
-                                    labelStyle: const TextStyle(fontSize: 18),
-                                  ),
-                                  style: const TextStyle(fontSize: 18),
-                                  validator: (v) {
-                                    if (!_isKaryawan) {
-                                      if (v == null || v.trim().isEmpty) {
-                                        return 'NIP/NISN wajib untuk guru';
-                                      }
-                                    }
-                                    return null;
-                                  },
-                                ),
-                              ],
-                              const SizedBox(height: 16),
-                              TextFormField(
-                                controller: _passwordC,
-                                obscureText: _obscure,
-                                decoration: InputDecoration(
-                                  labelText: 'Password',
-                                  prefixIcon: Icon(
-                                    Icons.lock_outline,
-                                    color: cs.primary,
-                                    size: 32,
-                                  ),
+                              subtitle: const Text(
+                                'NIP/NISN tidak wajib diisi',
+                                style: TextStyle(fontSize: 15),
+                              ),
+                              controlAffinity: ListTileControlAffinity.leading,
+                              activeColor: cs.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // NIP/NISN (hanya muncul jika bukan karyawan)
+                          if (!_isKaryawan)
+                            TextFormField(
+                              controller: _nipNisnC,
+                              keyboardType: TextInputType.number,
+                              decoration: _inputDecoration(
+                                'NIP / NISN',
+                                Icons.credit_card_outlined,
+                                cs,
+                              ),
+                              style: const TextStyle(fontSize: 18),
+                              validator: (_) => _isKaryawan
+                                  ? null
+                                  : (_nipNisnC.text.trim().isEmpty
+                                        ? 'NIP/NISN wajib diisi'
+                                        : null),
+                            ),
+                          if (!_isKaryawan) const SizedBox(height: 20),
+
+                          // Password
+                          TextFormField(
+                            controller: _passwordC,
+                            obscureText: _obscure,
+                            decoration:
+                                _inputDecoration(
+                                  'Password',
+                                  Icons.lock_outline,
+                                  cs,
+                                ).copyWith(
                                   suffixIcon: IconButton(
                                     icon: Icon(
                                       _obscure
@@ -295,126 +276,139 @@ class _RegisterPageState extends State<RegisterPage> {
                                           : Icons.visibility,
                                       color: cs.primary,
                                     ),
-                                    onPressed: () {
-                                      setState(() => _obscure = !_obscure);
-                                    },
+                                    onPressed: () =>
+                                        setState(() => _obscure = !_obscure),
                                   ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white.withOpacity(0.7),
-                                  labelStyle: const TextStyle(fontSize: 18),
                                 ),
-                                style: const TextStyle(fontSize: 18),
-                                validator: (v) {
-                                  if (v == null || v.isEmpty) {
-                                    return 'Password wajib diisi';
-                                  }
-                                  if (v.length < 4) {
-                                    return 'Minimal 4 karakter';
-                                  }
-                                  return null;
-                                },
+                            style: const TextStyle(fontSize: 18),
+                            validator: (v) {
+                              if (v?.isEmpty == true)
+                                return 'Password wajib diisi';
+                              if (v!.length < 4) return 'Minimal 4 karakter';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 24),
+
+                          // Role Dropdown – DIPINDAH KE LUAR TextFormField BIAR GA BUG!
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: cs.primary.withOpacity(0.4),
                               ),
-                              const SizedBox(height: 16),
-                              DropdownButtonFormField<String>(
+                            ),
+                            child: DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
                                 value: _role,
-                                decoration: InputDecoration(
-                                  labelText: 'Role',
-                                  prefixIcon: Icon(
-                                    Icons.security_outlined,
-                                    color: cs.primary,
-                                    size: 32,
-                                  ),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white.withOpacity(0.7),
-                                  labelStyle: const TextStyle(fontSize: 18),
+                                isExpanded: true,
+                                icon: Icon(
+                                  Icons.arrow_drop_down,
+                                  color: cs.primary,
+                                  size: 32,
                                 ),
-                                style: const TextStyle(fontSize: 18),
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.black87,
+                                ),
+                                dropdownColor: Colors.white,
+                                borderRadius: BorderRadius.circular(16),
                                 items: const [
                                   DropdownMenuItem(
                                     value: 'user',
-                                    child: Text(
-                                      'User (Guru / Karyawan)',
-                                      style: TextStyle(fontSize: 18),
-                                    ),
+                                    child: Text('User (Siswa / Guru)'),
                                   ),
                                   DropdownMenuItem(
                                     value: 'admin',
-                                    child: Text(
-                                      'Admin',
-                                      style: TextStyle(fontSize: 18),
-                                    ),
+                                    child: Text('Admin'),
                                   ),
                                   DropdownMenuItem(
                                     value: 'superadmin',
-                                    child: Text(
-                                      'Super Admin',
-                                      style: TextStyle(fontSize: 18),
-                                    ),
+                                    child: Text('Super Admin'),
                                   ),
                                 ],
-                                onChanged: (val) {
-                                  if (val == null) return;
-                                  setState(() => _role = val);
-                                },
+                                onChanged: (val) =>
+                                    setState(() => _role = val!),
                               ),
-                              const SizedBox(height: 24),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  onPressed: _isLoading
-                                      ? null
-                                      : _handleRegister,
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: cs.primary,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    elevation: 4,
-                                    shadowColor: cs.primary.withOpacity(0.3),
-                                  ),
-                                  child: _isLoading
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            valueColor:
-                                                AlwaysStoppedAnimation<Color>(
-                                                  Colors.white,
-                                                ),
-                                          ),
-                                        )
-                                      : const Text(
-                                          'Daftar Sekarang',
-                                          style: TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                            fontSize: 20,
-                                          ),
-                                        ),
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
-                        ),
+                          const SizedBox(height: 32),
+
+                          // Tombol Daftar
+                          SizedBox(
+                            width: double.infinity,
+                            height: 60,
+                            child: ElevatedButton(
+                              onPressed: _isLoading ? null : _handleRegister,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: cs.primary,
+                                foregroundColor: Colors.white,
+                                elevation: 8,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                shadowColor: cs.primary.withOpacity(0.5),
+                              ),
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      width: 28,
+                                      height: 28,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 3,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'DAFTAR SEKARANG',
+                                      style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1.2,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  // Helper untuk Input Decoration
+  InputDecoration _inputDecoration(
+    String label,
+    IconData icon,
+    ColorScheme cs,
+  ) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icon, color: cs.primary, size: 28),
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: cs.primary.withOpacity(0.3)),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: cs.primary.withOpacity(0.3)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide(color: cs.primary, width: 2),
+      ),
+      labelStyle: TextStyle(fontSize: 18, color: cs.primary),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
     );
   }
 }

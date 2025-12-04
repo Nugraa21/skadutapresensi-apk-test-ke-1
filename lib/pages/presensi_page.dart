@@ -1,5 +1,5 @@
 // pages/presensi_page.dart
-// VERSI FINAL – SELFIE LANGSUNG KAMERA FULLSCREEN + SWITCH KAMERA DEPAN/BELAKANG
+// VERSI FINAL – SELFIE KAMERA FULLSCREEN + TOMBOL KIRIM SELALU KELIHATAN (FIXED!)
 
 import 'dart:convert';
 import 'dart:io';
@@ -113,25 +113,19 @@ class _PresensiPageState extends State<PresensiPage>
     );
   }
 
-  // SELFIE DENGAN KAMERA FULLSCREEN
+  // SELFIE FULLSCREEN
   Future<void> _openCameraSelfie() async {
-    if (cameras.isEmpty) {
-      cameras = await availableCameras();
-    }
+    if (cameras.isEmpty) cameras = await availableCameras();
     if (cameras.isEmpty) {
       _showSnack('Kamera tidak tersedia');
       return;
     }
-
     final result = await Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => CameraSelfieScreen(initialCamera: cameras.first),
       ),
     );
-
-    if (result is File) {
-      setState(() => _selfieFile = result);
-    }
+    if (result is File) setState(() => _selfieFile = result);
   }
 
   Future<void> _pickDokumen() async {
@@ -167,7 +161,6 @@ class _PresensiPageState extends State<PresensiPage>
     }
 
     setState(() => _loading = true);
-
     try {
       final res = await ApiService.submitPresensi(
         userId: widget.user.id,
@@ -526,197 +519,218 @@ class _PresensiPageState extends State<PresensiPage>
         ),
         child: SafeArea(
           top: false,
-          child: _loading
-              ? const Center(child: CircularProgressIndicator(strokeWidth: 5))
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 110, 20, 40),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        _jenis == 'Masuk'
-                            ? 'Selamat Datang!'
-                            : _jenis == 'Pulang'
-                            ? 'Selamat Pulang!'
-                            : 'Presensi $_jenis',
-                        style: const TextStyle(
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
+          child: Stack(
+            children: [
+              // KONTEN SCROLLABLE
+              SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(20, 110, 20, 120),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      _jenis == 'Masuk'
+                          ? 'Selamat Datang!'
+                          : _jenis == 'Pulang'
+                          ? 'Selamat Pulang!'
+                          : 'Presensi $_jenis',
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _isMapNeeded
-                            ? 'Pastikan kamu berada di area sekolah'
-                            : 'Lengkapi data di bawah ini',
-                        style: TextStyle(color: Colors.grey[700], fontSize: 15),
-                        textAlign: TextAlign.center,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _isMapNeeded
+                          ? 'Pastikan kamu berada di area sekolah'
+                          : 'Lengkapi data di bawah ini',
+                      style: TextStyle(color: Colors.grey[700], fontSize: 15),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 30),
+
+                    if (_isMapNeeded) ...[
+                      _buildMap(),
+                      const SizedBox(height: 30),
+                    ],
+
+                    if (_isIzin || _isPulangCepat)
+                      _buildTextField(
+                        _ketC,
+                        'Keterangan / Alasan',
+                        'Contoh: Sakit, ada keperluan...',
+                        Icons.note_alt_rounded,
+                        cs,
                       ),
-                      const SizedBox(height: 30),
+                    if (_isIzin || _isPulangCepat) const SizedBox(height: 20),
 
-                      if (_isMapNeeded) ...[
-                        _buildMap(),
-                        const SizedBox(height: 30),
-                      ],
+                    if (_isPenugasan)
+                      _buildTextField(
+                        _infoC,
+                        'Informasi Penugasan',
+                        'Jelaskan tugas yang diberikan',
+                        Icons.assignment_rounded,
+                        cs,
+                        maxLines: 5,
+                      ),
+                    if (_isPenugasan) const SizedBox(height: 20),
 
-                      if (_isIzin || _isPulangCepat)
-                        _buildTextField(
-                          _ketC,
-                          'Keterangan / Alasan',
-                          'Contoh: Sakit, ada keperluan...',
-                          Icons.note_alt_rounded,
-                          cs,
-                        ),
-                      if (_isIzin || _isPulangCepat) const SizedBox(height: 20),
-
-                      if (_isPenugasan)
-                        _buildTextField(
-                          _infoC,
-                          'Informasi Penugasan',
-                          'Jelaskan tugas yang diberikan',
-                          Icons.assignment_rounded,
-                          cs,
-                          maxLines: 5,
-                        ),
-                      if (_isPenugasan) const SizedBox(height: 20),
-
-                      // SELFIE WAJIB DENGAN KAMERA
-                      if (_wajibSelfie)
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.07),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              ListTile(
-                                leading: Icon(
-                                  Icons.camera_alt_rounded,
-                                  color: Colors.red.shade600,
-                                  size: 32,
-                                ),
-                                title: const Text(
-                                  'Ambil Selfie (Wajib)',
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.red,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: _openCameraSelfie,
-                              ),
-                              if (_selfieFile != null)
-                                Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(20),
-                                    child: Image.file(
-                                      _selfieFile!,
-                                      height: 240,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      if (_wajibSelfie) const SizedBox(height: 20),
-
-                      if (_isIzin || _isPenugasan)
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.07),
-                                blurRadius: 16,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              ListTile(
-                                leading: Icon(
-                                  Icons.file_present_rounded,
-                                  color: Colors.red.shade600,
-                                  size: 32,
-                                ),
-                                title: Text(
-                                  _isIzin
-                                      ? 'Unggah Bukti Izin (Wajib)'
-                                      : 'Unggah Dokumen Tugas (Wajib)',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.red,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                trailing: const Icon(Icons.chevron_right),
-                                onTap: _pickDokumen,
-                              ),
-                              if (_dokumenFile != null)
-                                Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(20),
-                                    child: Image.file(
-                                      _dokumenFile!,
-                                      height: 240,
-                                      width: double.infinity,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-
-                      const SizedBox(height: 30),
-                      SizedBox(
-                        height: 64,
-                        child: ElevatedButton.icon(
-                          onPressed: _loading ? null : _submitPresensi,
-                          icon: _loading
-                              ? const SizedBox(
-                                  width: 26,
-                                  height: 26,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white,
-                                    strokeWidth: 3,
-                                  ),
-                                )
-                              : const Icon(Icons.send_rounded, size: 30),
-                          label: Text(
-                            _loading ? 'Mengirim...' : 'Kirim Presensi',
-                            style: const TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
+                    if (_wajibSelfie)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.07),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
                             ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: cs.primary,
-                            elevation: 12,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(32),
-                            ),
-                          ),
+                          ],
                         ),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: Icon(
+                                Icons.camera_alt_rounded,
+                                color: Colors.red.shade600,
+                                size: 32,
+                              ),
+                              title: const Text(
+                                'Ambil Selfie (Wajib)',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.red,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: _openCameraSelfie,
+                            ),
+                            if (_selfieFile != null)
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Image.file(
+                                    _selfieFile!,
+                                    height: 240,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    if (_wajibSelfie) const SizedBox(height: 20),
+
+                    if (_isIzin || _isPenugasan)
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.07),
+                              blurRadius: 16,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            ListTile(
+                              leading: Icon(
+                                Icons.file_present_rounded,
+                                color: Colors.red.shade600,
+                                size: 32,
+                              ),
+                              title: Text(
+                                _isIzin
+                                    ? 'Unggah Bukti Izin (Wajib)'
+                                    : 'Unggah Dokumen Tugas (Wajib)',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.red,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              trailing: const Icon(Icons.chevron_right),
+                              onTap: _pickDokumen,
+                            ),
+                            if (_dokumenFile != null)
+                              Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(20),
+                                  child: Image.file(
+                                    _dokumenFile!,
+                                    height: 240,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 100),
+                  ],
+                ),
+              ),
+
+              // TOMBOL KIRIM SELALU KELIHATAN
+              Positioned(
+                left: 20,
+                right: 20,
+                bottom: 20,
+                child: Container(
+                  height: 68,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(34),
+                    boxShadow: [
+                      BoxShadow(
+                        color: cs.primary.withOpacity(0.4),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
+                  child: ElevatedButton.icon(
+                    onPressed: _loading ? null : _submitPresensi,
+                    icon: _loading
+                        ? const SizedBox(
+                            width: 28,
+                            height: 28,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 3,
+                            ),
+                          )
+                        : const Icon(Icons.send_rounded, size: 32),
+                    label: Text(
+                      _loading ? 'Mengirim Presensi...' : 'Kirim Presensi',
+                      style: const TextStyle(
+                        fontSize: 21,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: cs.primary,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(34),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                    ),
+                  ),
                 ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -760,7 +774,7 @@ class _PresensiPageState extends State<PresensiPage>
   }
 }
 
-// HALAMAN KAMERA SELFIE FULLSCREEN
+// HALAMAN KAMERA SELFIE
 class CameraSelfieScreen extends StatefulWidget {
   final CameraDescription initialCamera;
   const CameraSelfieScreen({super.key, required this.initialCamera});
