@@ -1,5 +1,5 @@
 // pages/presensi_page.dart
-// VERSI FINAL – WAJIB SELFIE UNTUK MASUK/PULANG/PULANG CEPAT, WAJIB DOKUMEN UNTUK IZIN
+// VERSI FINAL – SELFIE LANGSUNG KAMERA FULLSCREEN + SWITCH KAMERA DEPAN/BELAKANG
 
 import 'dart:convert';
 import 'dart:io';
@@ -7,11 +7,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:camera/camera.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as lat_lng;
 
 import '../api/api_service.dart';
 import '../models/user_model.dart';
+
+List<CameraDescription> cameras = [];
 
 class PresensiPage extends StatefulWidget {
   final UserModel user;
@@ -38,10 +41,9 @@ class _PresensiPageState extends State<PresensiPage>
   bool _loading = false;
   final ImagePicker _picker = ImagePicker();
 
-  // Koordinat sekolah
   static const double sekolahLat = -7.7771639173358516;
   static const double sekolahLng = 110.36716347232226;
-  static const double maxRadius = 200; // meter
+  static const double maxRadius = 200;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -50,7 +52,6 @@ class _PresensiPageState extends State<PresensiPage>
   void initState() {
     super.initState();
     _jenis = widget.initialJenis;
-
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 2),
@@ -60,7 +61,6 @@ class _PresensiPageState extends State<PresensiPage>
       end: 1.0,
     ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeOut));
     _pulseController.repeat();
-
     if (_isMapNeeded) _initLocation();
   }
 
@@ -76,8 +76,9 @@ class _PresensiPageState extends State<PresensiPage>
   bool get _isPenugasan => _jenis.startsWith('Penugasan');
   bool get _isIzin => _jenis == 'Izin';
   bool get _isPulangCepat => _jenis == 'Pulang Cepat';
+  bool get _wajibSelfie =>
+      _jenis == 'Masuk' || _jenis == 'Pulang' || _isPulangCepat;
 
-  // ========== LOKASI ==========
   Future<void> _initLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled)
@@ -89,9 +90,8 @@ class _PresensiPageState extends State<PresensiPage>
       if (perm == LocationPermission.denied)
         return _showSnack('Izin lokasi ditolak');
     }
-    if (perm == LocationPermission.deniedForever) {
+    if (perm == LocationPermission.deniedForever)
       return _showSnack('Izin lokasi ditolak permanen');
-    }
 
     try {
       final pos = await Geolocator.getCurrentPosition(
@@ -113,14 +113,25 @@ class _PresensiPageState extends State<PresensiPage>
     );
   }
 
-  // ========== IMAGE PICKER ==========
-  Future<void> _pickSelfie() async {
-    final img = await _picker.pickImage(
-      source: ImageSource.camera,
-      preferredCameraDevice: CameraDevice.front,
-      imageQuality: 80,
+  // SELFIE DENGAN KAMERA FULLSCREEN
+  Future<void> _openCameraSelfie() async {
+    if (cameras.isEmpty) {
+      cameras = await availableCameras();
+    }
+    if (cameras.isEmpty) {
+      _showSnack('Kamera tidak tersedia');
+      return;
+    }
+
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => CameraSelfieScreen(initialCamera: cameras.first),
+      ),
     );
-    if (img != null) setState(() => _selfieFile = File(img.path));
+
+    if (result is File) {
+      setState(() => _selfieFile = result);
+    }
   }
 
   Future<void> _pickDokumen() async {
@@ -131,32 +142,23 @@ class _PresensiPageState extends State<PresensiPage>
     if (doc != null) setState(() => _dokumenFile = File(doc.path));
   }
 
-  // ========== SUBMIT ==========
   Future<void> _submitPresensi() async {
-    // Validasi lokasi untuk Masuk & Pulang
     if (_isMapNeeded) {
       if (_position == null) return _showSnack('Lokasi belum terdeteksi');
       final jarak = _distanceToSchool();
-      if (jarak > maxRadius) {
+      if (jarak > maxRadius)
         return _showSnack(
           'Di luar radius sekolah (±${jarak.toStringAsFixed(1)}m)',
         );
-      }
     }
 
-    // WAJIB SELFIE untuk Masuk, Pulang, Pulang Cepat
-    if (_jenis == 'Masuk' || _jenis == 'Pulang' || _jenis == 'Pulang Cepat') {
-      if (_selfieFile == null) return _showSnack('Selfie wajib diambil!');
-    }
-
-    // WAJIB DOKUMEN untuk Izin
+    if (_wajibSelfie && _selfieFile == null)
+      return _showSnack('Selfie wajib diambil!');
     if (_isIzin) {
       if (_dokumenFile == null) return _showSnack('Bukti izin wajib diunggah!');
       if (_ketC.text.trim().isEmpty)
         return _showSnack('Keterangan wajib diisi!');
     }
-
-    // WAJIB DOKUMEN + INFO untuk Penugasan
     if (_isPenugasan) {
       if (_infoC.text.trim().isEmpty)
         return _showSnack('Informasi penugasan wajib diisi!');
@@ -182,13 +184,12 @@ class _PresensiPageState extends State<PresensiPage>
             : '',
       );
 
-      if (res['status'] == true) {
+      if (res['status'] == true)
         _showSuccessDialog();
-      } else {
-        _showSnack(res['message'] ?? 'Gagal mengirim presensi');
-      }
+      else
+        _showSnack(res['message'] ?? 'Gagal mengirim');
     } catch (e) {
-      _showSnack('Terjadi kesalahan: $e');
+      _showSnack('Error: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -227,11 +228,7 @@ class _PresensiPageState extends State<PresensiPage>
                 ),
               ),
               const SizedBox(height: 12),
-              Text(
-                "Presensi $_jenis berhasil dikirim",
-                style: const TextStyle(fontSize: 16),
-                textAlign: TextAlign.center,
-              ),
+              Text("Presensi $_jenis berhasil!", textAlign: TextAlign.center),
               const SizedBox(height: 8),
               const Text(
                 "Terima kasih!",
@@ -248,11 +245,10 @@ class _PresensiPageState extends State<PresensiPage>
     );
 
     Future.delayed(const Duration(milliseconds: 2200), () {
-      if (mounted) {
+      if (mounted)
         Navigator.of(context)
           ..pop()
           ..pop();
-      }
     });
   }
 
@@ -260,7 +256,7 @@ class _PresensiPageState extends State<PresensiPage>
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w600)),
-        backgroundColor: msg.contains('berhasil')
+        backgroundColor: msg.contains('SUKSES') || msg.contains('berhasil')
             ? Colors.green.shade600
             : Colors.red.shade600,
         behavior: SnackBarBehavior.floating,
@@ -270,7 +266,6 @@ class _PresensiPageState extends State<PresensiPage>
     );
   }
 
-  // ========== MAP ==========
   Widget _buildMap() {
     final jarak = _distanceToSchool();
     final inRadius = jarak <= maxRadius;
@@ -543,8 +538,6 @@ class _PresensiPageState extends State<PresensiPage>
                             ? 'Selamat Datang!'
                             : _jenis == 'Pulang'
                             ? 'Selamat Pulang!'
-                            : _jenis == 'Izin'
-                            ? 'Ajukan Izin'
                             : 'Presensi $_jenis',
                         style: const TextStyle(
                           fontSize: 28,
@@ -567,18 +560,16 @@ class _PresensiPageState extends State<PresensiPage>
                         const SizedBox(height: 30),
                       ],
 
-                      // KETERANGAN (Izin & Pulang Cepat)
                       if (_isIzin || _isPulangCepat)
                         _buildTextField(
                           _ketC,
                           'Keterangan / Alasan',
-                          'Contoh: Sakit, ada keperluan keluarga, dll',
+                          'Contoh: Sakit, ada keperluan...',
                           Icons.note_alt_rounded,
                           cs,
                         ),
                       if (_isIzin || _isPulangCepat) const SizedBox(height: 20),
 
-                      // INFORMASI PENUGASAN
                       if (_isPenugasan)
                         _buildTextField(
                           _infoC,
@@ -590,49 +581,109 @@ class _PresensiPageState extends State<PresensiPage>
                         ),
                       if (_isPenugasan) const SizedBox(height: 20),
 
-                      // SELFIE (WAJIB untuk Masuk/Pulang/Pulang Cepat)
-                      if (_jenis == 'Masuk' ||
-                          _jenis == 'Pulang' ||
-                          _jenis == 'Pulang Cepat')
-                        _buildImagePicker(
-                          'Ambil Selfie (Wajib)',
-                          _selfieFile,
-                          _pickSelfie,
-                          Icons.camera_alt_rounded,
-                          cs,
-                          required: true,
+                      // SELFIE WAJIB DENGAN KAMERA
+                      if (_wajibSelfie)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.07),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              ListTile(
+                                leading: Icon(
+                                  Icons.camera_alt_rounded,
+                                  color: Colors.red.shade600,
+                                  size: 32,
+                                ),
+                                title: const Text(
+                                  'Ambil Selfie (Wajib)',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.red,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: _openCameraSelfie,
+                              ),
+                              if (_selfieFile != null)
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Image.file(
+                                      _selfieFile!,
+                                      height: 240,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
-                      if (_jenis == 'Masuk' ||
-                          _jenis == 'Pulang' ||
-                          _jenis == 'Pulang Cepat')
-                        const SizedBox(height: 20),
+                      if (_wajibSelfie) const SizedBox(height: 20),
 
-                      // DOKUMEN BUKTI IZIN (WAJIB untuk Izin)
-                      if (_isIzin)
-                        _buildImagePicker(
-                          'Unggah Bukti Izin (Wajib)',
-                          _dokumenFile,
-                          _pickDokumen,
-                          Icons.file_present_rounded,
-                          cs,
-                          required: true,
-                        ),
-                      if (_isIzin) const SizedBox(height: 20),
-
-                      // DOKUMEN PENUGASAN
-                      if (_isPenugasan)
-                        _buildImagePicker(
-                          'Unggah Surat Tugas / Dokumen (Wajib)',
-                          _dokumenFile,
-                          _pickDokumen,
-                          Icons.file_present_rounded,
-                          cs,
-                          required: true,
+                      if (_isIzin || _isPenugasan)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.07),
+                                blurRadius: 16,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              ListTile(
+                                leading: Icon(
+                                  Icons.file_present_rounded,
+                                  color: Colors.red.shade600,
+                                  size: 32,
+                                ),
+                                title: Text(
+                                  _isIzin
+                                      ? 'Unggah Bukti Izin (Wajib)'
+                                      : 'Unggah Dokumen Tugas (Wajib)',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.red,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                trailing: const Icon(Icons.chevron_right),
+                                onTap: _pickDokumen,
+                              ),
+                              if (_dokumenFile != null)
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Image.file(
+                                      _dokumenFile!,
+                                      height: 240,
+                                      width: double.infinity,
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
 
                       const SizedBox(height: 30),
-
-                      // TOMBOL KIRIM
                       SizedBox(
                         height: 64,
                         child: ElevatedButton.icon(
@@ -652,20 +703,17 @@ class _PresensiPageState extends State<PresensiPage>
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: cs.primary,
                             elevation: 12,
-                            shadowColor: cs.primary.withOpacity(0.5),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(32),
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
@@ -710,60 +758,136 @@ class _PresensiPageState extends State<PresensiPage>
       ),
     );
   }
+}
 
-  Widget _buildImagePicker(
-    String title,
-    File? file,
-    VoidCallback onTap,
-    IconData icon,
-    ColorScheme cs, {
-    bool required = false,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.07),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          ListTile(
-            leading: Icon(
-              icon,
-              color: required ? Colors.red.shade600 : cs.primary,
-              size: 32,
-            ),
-            title: Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: required ? Colors.red.shade600 : Colors.black87,
-                fontSize: 16,
-              ),
-            ),
-            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-            onTap: onTap,
-          ),
-          if (file != null)
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Image.file(
-                  file,
-                  height: 210,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+// HALAMAN KAMERA SELFIE FULLSCREEN
+class CameraSelfieScreen extends StatefulWidget {
+  final CameraDescription initialCamera;
+  const CameraSelfieScreen({super.key, required this.initialCamera});
+
+  @override
+  State<CameraSelfieScreen> createState() => _CameraSelfieScreenState();
+}
+
+class _CameraSelfieScreenState extends State<CameraSelfieScreen> {
+  late CameraController _controller;
+  late Future<void> _initializeControllerFuture;
+  bool _isRearCamera = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = CameraController(
+      _isRearCamera ? cameras.last : cameras.first,
+      ResolutionPreset.high,
+    );
+    _initializeControllerFuture = _controller.initialize();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _switchCamera() async {
+    _isRearCamera = !_isRearCamera;
+    _controller = CameraController(
+      _isRearCamera ? cameras.last : cameras.first,
+      ResolutionPreset.high,
+    );
+    await _controller.initialize();
+    setState(() {});
+  }
+
+  Future<void> _takePicture() async {
+    try {
+      await _initializeControllerFuture;
+      final image = await _controller.takePicture();
+      Navigator.pop(context, File(image.path));
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Gagal mengambil foto')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: FutureBuilder<void>(
+        future: _initializeControllerFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.done) {
+            return Stack(
+              children: [
+                Center(child: CameraPreview(_controller)),
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Container(
+                    padding: const EdgeInsets.all(30),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.flip_camera_ios,
+                            size: 40,
+                            color: Colors.white,
+                          ),
+                          onPressed: _switchCamera,
+                        ),
+                        GestureDetector(
+                          onTap: _takePicture,
+                          child: Container(
+                            width: 80,
+                            height: 80,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white, width: 6),
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                            child: const Icon(
+                              Icons.camera,
+                              size: 50,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(
+                            Icons.close,
+                            size: 40,
+                            color: Colors.white,
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ),
-        ],
+                const SafeArea(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Text(
+                      'Ambil Selfie',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          } else {
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            );
+          }
+        },
       ),
     );
   }
