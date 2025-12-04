@@ -1,5 +1,5 @@
 // pages/presensi_page.dart
-// VERSI FINAL – UI/UX PREMIUM 2025, MAP CANTIK, RESPONSIF 100%
+// VERSI FINAL – IZIN TANPA LOKASI, TOMBOL JELAS, POPUP SUKSES + AUTO BACK
 
 import 'dart:convert';
 import 'dart:io';
@@ -38,9 +38,10 @@ class _PresensiPageState extends State<PresensiPage>
   bool _loading = false;
   final ImagePicker _picker = ImagePicker();
 
+  // Koordinat sekolah (hanya dipakai untuk Masuk & Pulang)
   static const double sekolahLat = -7.7771639173358516;
   static const double sekolahLng = 110.36716347232226;
-  static const double maxRadius = 150;
+  static const double maxRadius = 140; // meter
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -60,7 +61,10 @@ class _PresensiPageState extends State<PresensiPage>
     ).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeOut));
     _pulseController.repeat();
 
-    if (!_isNoLocationNeeded) _initLocation();
+    // Hanya ambil lokasi jika Masuk atau Pulang
+    if (_isMapNeeded) {
+      _initLocation();
+    }
   }
 
   @override
@@ -71,23 +75,31 @@ class _PresensiPageState extends State<PresensiPage>
     super.dispose();
   }
 
+  // ========== JENIS PRESENSI ==========
   bool get _isPenugasan => _jenis.startsWith('Penugasan');
-  bool get _isNoLocationNeeded => _jenis == 'Izin' || _isPenugasan;
-  bool get _isMapNeeded => _jenis == 'Masuk' || _jenis == 'Pulang';
+  bool get _isIzin => _jenis == 'Izin';
+  bool get _isMapNeeded =>
+      _jenis == 'Masuk' || _jenis == 'Pulang'; // Hanya Masuk & Pulang butuh map
 
+  // ========== LOKASI (Hanya untuk Masuk & Pulang) ==========
   Future<void> _initLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled)
-      return _showSnack('Location service mati, nyalakan dulu ya');
+    if (!serviceEnabled) {
+      _showSnack('Location service mati, nyalakan dulu ya');
+      return;
+    }
 
     LocationPermission perm = await Geolocator.checkPermission();
     if (perm == LocationPermission.denied) {
       perm = await Geolocator.requestPermission();
-      if (perm == LocationPermission.denied)
-        return _showSnack('Izin lokasi ditolak');
+      if (perm == LocationPermission.denied) {
+        _showSnack('Izin lokasi ditolak');
+        return;
+      }
     }
     if (perm == LocationPermission.deniedForever) {
-      return _showSnack('Izin lokasi ditolak permanen');
+      _showSnack('Izin lokasi ditolak permanen');
+      return;
     }
 
     try {
@@ -110,6 +122,7 @@ class _PresensiPageState extends State<PresensiPage>
     );
   }
 
+  // ========== IMAGE PICKER ==========
   Future<void> _pickSelfie() async {
     final img = await _picker.pickImage(
       source: ImageSource.camera,
@@ -127,25 +140,34 @@ class _PresensiPageState extends State<PresensiPage>
     if (doc != null) setState(() => _dokumenFile = File(doc.path));
   }
 
+  // ========== SUBMIT PRESENSI ==========
   Future<void> _submitPresensi() async {
-    if (!_isNoLocationNeeded && _position == null)
-      return _showSnack('Lokasi belum terbaca');
-    final jarak = _distanceToSchool();
-    if (!_isNoLocationNeeded && jarak > maxRadius) {
-      return _showSnack(
-        'Kamu di luar radius sekolah (${jarak.toStringAsFixed(1)}m)',
-      );
+    // Validasi lokasi hanya untuk Masuk & Pulang
+    if (_isMapNeeded) {
+      if (_position == null) return _showSnack('Lokasi belum terdeteksi');
+      final jarak = _distanceToSchool();
+      if (jarak > maxRadius) {
+        return _showSnack(
+          'Kamu di luar radius sekolah (±${jarak.toStringAsFixed(1)}m)',
+        );
+      }
     }
 
+    // Validasi keterangan
     if ((_jenis == 'Izin' || _jenis == 'Pulang Cepat') &&
         _ketC.text.trim().isEmpty) {
       return _showSnack('Keterangan wajib diisi!');
     }
-    if (_isPenugasan && (_infoC.text.trim().isEmpty || _dokumenFile == null)) {
-      return _showSnack('Informasi & dokumen penugasan wajib diisi!');
+
+    // Validasi penugasan
+    if (_isPenugasan) {
+      if (_infoC.text.trim().isEmpty)
+        return _showSnack('Informasi penugasan wajib diisi!');
+      if (_dokumenFile == null) return _showSnack('Dokumen wajib diunggah!');
     }
 
     setState(() => _loading = true);
+
     try {
       final res = await ApiService.submitPresensi(
         userId: widget.user.id,
@@ -163,53 +185,103 @@ class _PresensiPageState extends State<PresensiPage>
       );
 
       if (res['status'] == true) {
-        _showSnack(res['message'] ?? 'Presensi berhasil!');
-        _resetForm();
+        _showSuccessDialog();
       } else {
-        _showSnack(res['message'] ?? 'Gagal presensi');
+        _showSnack(res['message'] ?? 'Gagal mengirim presensi');
       }
     } catch (e) {
-      _showSnack('Error: $e');
+      _showSnack('Terjadi kesalahan: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  void _resetForm() {
-    setState(() {
-      _ketC.clear();
-      _infoC.clear();
-      _selfieFile = null;
-      _dokumenFile = null;
+  // ========== POPUP SUKSES + AUTO KEMBALI ==========
+  void _showSuccessDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+          backgroundColor: Colors.white,
+          contentPadding: const EdgeInsets.all(30),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: const BoxDecoration(
+                  color: Colors.green,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check, size: 70, color: Colors.white),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                "SUKSES!",
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "Presensi $_jenis berhasil dikirim",
+                style: const TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                "Terima kasih!",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    // Otomatis kembali ke menu setelah 2.2 detik
+    Future.delayed(const Duration(milliseconds: 2200), () {
+      if (mounted) {
+        Navigator.of(context)
+          ..pop() // tutup dialog
+          ..pop(); // kembali ke halaman sebelumnya
+      }
     });
   }
 
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          msg,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: msg.contains('berhasil')
+        content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w600)),
+        backgroundColor: msg.contains('berhasil') || msg.contains('SUKSES')
             ? Colors.green.shade600
             : Colors.red.shade600,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 4),
       ),
     );
   }
 
-  // ==================== MAP CANTIK + PULSE ANIMATION ====================
+  // ========== MAP CANTIK (Hanya untuk Masuk & Pulang) ==========
   Widget _buildMap() {
     final jarak = _distanceToSchool();
     final inRadius = jarak <= maxRadius;
 
     return Container(
       height: 380,
-      margin: const EdgeInsets.symmetric(horizontal: 4),
+      margin: const EdgeInsets.symmetric(horizontal: 6),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
@@ -239,24 +311,19 @@ class _PresensiPageState extends State<PresensiPage>
                       'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                   subdomains: const ['a', 'b', 'c'],
                 ),
-                // Pulse Circle
                 AnimatedBuilder(
                   animation: _pulseAnimation,
                   builder: (_, __) => CircleLayer(
                     circles: [
                       CircleMarker(
                         point: lat_lng.LatLng(sekolahLat, sekolahLng),
-                        radius: maxRadius + (_pulseAnimation.value * 30),
+                        radius: maxRadius + (_pulseAnimation.value * 35),
                         useRadiusInMeter: true,
                         color: Colors.transparent,
                         borderColor: inRadius
-                            ? Colors.green.withOpacity(
-                                0.4 - _pulseAnimation.value * 0.3,
-                              )
-                            : Colors.red.withOpacity(
-                                0.4 - _pulseAnimation.value * 0.3,
-                              ),
-                        borderStrokeWidth: 8,
+                            ? Colors.green.withOpacity(0.5)
+                            : Colors.red.withOpacity(0.5),
+                        borderStrokeWidth: 10,
                       ),
                     ],
                   ),
@@ -268,10 +335,10 @@ class _PresensiPageState extends State<PresensiPage>
                       radius: maxRadius,
                       useRadiusInMeter: true,
                       color: inRadius
-                          ? Colors.green.withOpacity(0.2)
-                          : Colors.red.withOpacity(0.2),
+                          ? Colors.green.withOpacity(0.22)
+                          : Colors.red.withOpacity(0.22),
                       borderColor: inRadius ? Colors.green : Colors.redAccent,
-                      borderStrokeWidth: 5,
+                      borderStrokeWidth: 6,
                     ),
                   ],
                 ),
@@ -297,7 +364,7 @@ class _PresensiPageState extends State<PresensiPage>
                             ),
                             child: Icon(
                               Icons.school_rounded,
-                              size: 38,
+                              size: 40,
                               color: Colors.red.shade700,
                             ),
                           ),
@@ -305,10 +372,10 @@ class _PresensiPageState extends State<PresensiPage>
                             "Sekolah",
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 13,
+                              fontSize: 14,
                               color: Colors.white,
                               shadows: [
-                                Shadow(color: Colors.black, blurRadius: 6),
+                                Shadow(color: Colors.black, blurRadius: 8),
                               ],
                             ),
                           ),
@@ -339,7 +406,7 @@ class _PresensiPageState extends State<PresensiPage>
                               ),
                               child: Icon(
                                 Icons.my_location,
-                                size: 34,
+                                size: 36,
                                 color: Colors.blue.shade700,
                               ),
                             ),
@@ -347,10 +414,10 @@ class _PresensiPageState extends State<PresensiPage>
                               "Kamu",
                               style: TextStyle(
                                 fontWeight: FontWeight.bold,
-                                fontSize: 13,
+                                fontSize: 14,
                                 color: Colors.white,
                                 shadows: [
-                                  Shadow(color: Colors.black, blurRadius: 6),
+                                  Shadow(color: Colors.black, blurRadius: 8),
                                 ],
                               ),
                             ),
@@ -361,68 +428,69 @@ class _PresensiPageState extends State<PresensiPage>
                 ),
               ],
             ),
-
-            // Status Card di Atas Map
             Positioned(
               top: 16,
               left: 16,
               right: 16,
-              child: Material(
-                borderRadius: BorderRadius.circular(24),
-                elevation: 10,
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: inRadius
-                          ? [Colors.green.shade500, Colors.green.shade400]
-                          : [Colors.red.shade500, Colors.red.shade400],
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: inRadius
+                        ? [Colors.green.shade600, Colors.green.shade500]
+                        : [Colors.red.shade600, Colors.red.shade500],
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black38,
+                      blurRadius: 12,
+                      offset: const Offset(0, 6),
                     ),
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        inRadius
-                            ? Icons.check_circle
-                            : Icons.warning_amber_rounded,
-                        color: Colors.white,
-                        size: 36,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              inRadius ? "Di Dalam Area!" : "Di Luar Area",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                              ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      inRadius
+                          ? Icons.check_circle
+                          : Icons.warning_amber_rounded,
+                      color: Colors.white,
+                      size: 38,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            inRadius ? "Di Dalam Area!" : "Di Luar Area",
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
-                            Text(
-                              "${jarak.toStringAsFixed(1)} m dari sekolah",
-                              style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (inRadius)
-                        const Text(
-                          "SIAP!",
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
                           ),
+                          Text(
+                            "${jarak.toStringAsFixed(1)} m dari sekolah",
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (inRadius)
+                      const Text(
+                        "SIAP!",
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
                         ),
-                    ],
-                  ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -462,7 +530,7 @@ class _PresensiPageState extends State<PresensiPage>
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [cs.primary.withOpacity(0.05), Colors.white],
+            colors: [cs.primary.withOpacity(0.06), Colors.white],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -470,18 +538,20 @@ class _PresensiPageState extends State<PresensiPage>
         child: SafeArea(
           top: false,
           child: _loading
-              ? const Center(child: CircularProgressIndicator(strokeWidth: 4))
+              ? const Center(child: CircularProgressIndicator(strokeWidth: 5))
               : SingleChildScrollView(
                   padding: const EdgeInsets.fromLTRB(20, 110, 20, 40),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Judul Selamat Datang
+                      // Judul
                       Text(
                         _jenis == 'Masuk'
-                            ? 'Selamat Pagi! 👋'
+                            ? 'Selamat Pagi!'
                             : _jenis == 'Pulang'
-                            ? 'Selamat Pulang! 🏠'
+                            ? 'Selamat Pulang!'
+                            : _jenis == 'Izin'
+                            ? 'Ajukan Izin'
                             : 'Presensi $_jenis',
                         style: const TextStyle(
                           fontSize: 28,
@@ -491,34 +561,38 @@ class _PresensiPageState extends State<PresensiPage>
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Pastikan kamu berada di area yang benar',
+                        _isMapNeeded
+                            ? 'Pastikan kamu berada di area sekolah'
+                            : 'Lengkapi data di bawah ini',
                         style: TextStyle(color: Colors.grey[700], fontSize: 15),
                         textAlign: TextAlign.center,
                       ),
                       const SizedBox(height: 30),
 
-                      // Map (hanya untuk Masuk/Pulang, tapi tetap muncul cantik di Izin jika lokasi diambil)
-                      if (_isMapNeeded || !_isNoLocationNeeded) ...[
+                      // Map hanya untuk Masuk & Pulang
+                      if (_isMapNeeded) ...[
                         _buildMap(),
                         const SizedBox(height: 30),
                       ],
 
-                      // Form Izin / Penugasan
+                      // Form Izin / Pulang Cepat
                       if (_jenis == 'Izin' || _jenis == 'Pulang Cepat') ...[
                         _buildTextField(
                           _ketC,
                           'Keterangan / Alasan',
-                          'Wajib diisi',
+                          'Contoh: Sakit, ada keperluan keluarga, dll',
                           Icons.note_alt_rounded,
                           cs,
                         ),
                         const SizedBox(height: 20),
                       ],
+
+                      // Form Penugasan
                       if (_isPenugasan) ...[
                         _buildTextField(
                           _infoC,
                           'Informasi Penugasan',
-                          'Wajib diisi',
+                          'Jelaskan tugas yang diberikan',
                           Icons.assignment_rounded,
                           cs,
                           maxLines: 5,
@@ -539,7 +613,7 @@ class _PresensiPageState extends State<PresensiPage>
                       // Dokumen Penugasan
                       if (_isPenugasan)
                         _buildImagePicker(
-                          'Unggah Surat/Dokumen (Wajib)',
+                          'Unggah Surat Tugas / Dokumen (Wajib)',
                           _dokumenFile,
                           _pickDokumen,
                           Icons.file_present_rounded,
@@ -549,33 +623,37 @@ class _PresensiPageState extends State<PresensiPage>
 
                       const SizedBox(height: 30),
 
-                      // Tombol Kirim
+                      // Tombol Kirim – Teks JELAS BANGET
                       SizedBox(
-                        height: 62,
+                        height: 64,
                         child: ElevatedButton.icon(
                           onPressed: _loading ? null : _submitPresensi,
                           icon: _loading
                               ? const SizedBox(
-                                  width: 24,
-                                  height: 24,
+                                  width: 26,
+                                  height: 26,
                                   child: CircularProgressIndicator(
                                     color: Colors.white,
+                                    strokeWidth: 3,
                                   ),
                                 )
-                              : const Icon(Icons.send_rounded, size: 28),
+                              : const Icon(Icons.send_rounded, size: 30),
                           label: Text(
                             _loading ? 'Mengirim...' : 'Kirim Presensi',
                             style: const TextStyle(
-                              fontSize: 19,
+                              fontSize: 20,
                               fontWeight: FontWeight.bold,
+                              color: Colors.white,
                             ),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: cs.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 12,
+                            shadowColor: cs.primary.withOpacity(0.5),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                              borderRadius: BorderRadius.circular(32),
                             ),
-                            elevation: 10,
                           ),
                         ),
                       ),
@@ -602,8 +680,8 @@ class _PresensiPageState extends State<PresensiPage>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 15,
+            color: Colors.black.withOpacity(0.07),
+            blurRadius: 16,
             offset: const Offset(0, 6),
           ),
         ],
@@ -614,7 +692,7 @@ class _PresensiPageState extends State<PresensiPage>
         decoration: InputDecoration(
           labelText: label,
           hintText: hint,
-          prefixIcon: Icon(icon, color: cs.primary),
+          prefixIcon: Icon(icon, color: cs.primary, size: 28),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 20,
@@ -639,8 +717,8 @@ class _PresensiPageState extends State<PresensiPage>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 15,
+            color: Colors.black.withOpacity(0.07),
+            blurRadius: 16,
             offset: const Offset(0, 6),
           ),
         ],
@@ -657,10 +735,11 @@ class _PresensiPageState extends State<PresensiPage>
               title,
               style: TextStyle(
                 fontWeight: FontWeight.w600,
-                color: required ? Colors.red.shade600 : null,
+                color: required ? Colors.red.shade600 : Colors.black87,
+                fontSize: 16,
               ),
             ),
-            trailing: const Icon(Icons.chevron_right),
+            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
             onTap: onTap,
           ),
           if (file != null)
@@ -670,7 +749,7 @@ class _PresensiPageState extends State<PresensiPage>
                 borderRadius: BorderRadius.circular(20),
                 child: Image.file(
                   file,
-                  height: 200,
+                  height: 210,
                   width: double.infinity,
                   fit: BoxFit.cover,
                 ),
