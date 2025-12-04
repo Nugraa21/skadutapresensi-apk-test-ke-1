@@ -1,10 +1,9 @@
-// api/api_service.dart (update getAllPresensi ke absen_admin_list.php untuk konsistensi, handle response uniform)
+// api/api_service.dart (UPDATED: Added 'informasi' and 'dokumenBase64' to submitPresensi; register now sends 'is_karyawan'; added getRekap with month/year)
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl =
-      "http://10.10.70.255/backendapk/"; // api ngrok dan harus di ganti saat restart server
+  static const String baseUrl = "http://192.168.0.101/backendapk/";
   // LOGIN
   static Future<Map<String, dynamic>> login({
     required String input,
@@ -17,13 +16,14 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
-  // REGISTER
+  // REGISTER (UPDATED: Add is_karyawan)
   static Future<Map<String, dynamic>> register({
     required String username,
     required String namaLengkap,
     required String nipNisn,
     required String password,
     required String role,
+    required bool isKaryawan, // NEW
   }) async {
     final res = await http.post(
       Uri.parse("$baseUrl/register.php"),
@@ -33,6 +33,7 @@ class ApiService {
         "nip_nisn": nipNisn,
         "password": password,
         "role": role,
+        "is_karyawan": isKaryawan ? '1' : '0', // NEW
       },
     );
     return jsonDecode(res.body);
@@ -75,11 +76,13 @@ class ApiService {
     return jsonDecode(res.body);
   }
 
-  // PRESENSI SUBMIT
+  // PRESENSI SUBMIT (UPDATED: Added informasi and dokumenBase64)
   static Future<Map<String, dynamic>> submitPresensi({
     required String userId,
     required String jenis,
     required String keterangan,
+    required String informasi, // NEW
+    required String dokumenBase64, // NEW
     required String latitude,
     required String longitude,
     required String base64Image,
@@ -88,6 +91,8 @@ class ApiService {
       "userId": userId,
       "jenis": jenis,
       "keterangan": keterangan,
+      "informasi": informasi, // NEW
+      "dokumenBase64": dokumenBase64, // NEW
       "latitude": latitude,
       "longitude": longitude,
       "base64Image": base64Image,
@@ -134,6 +139,20 @@ class ApiService {
       print('DEBUG API: JSON Parse Error: $e');
       throw Exception('Response bukan JSON valid: $e. Cek server log.');
     }
+  }
+
+  // NEW: Get Rekap (with optional month/year)
+  static Future<List<dynamic>> getRekap({String? month, String? year}) async {
+    var url = "$baseUrl/presensi_rekap.php";
+    if (month != null && year != null) {
+      url += "?month=$month&year=$year";
+    }
+    final res = await http.get(Uri.parse(url));
+    final data = jsonDecode(res.body);
+    if (data["status"] == true) {
+      return data["data"] as List<dynamic>;
+    }
+    return [];
   }
 
   // UPDATE PRESENSI STATUS (FIX: Debug detail untuk approve, handle 500)

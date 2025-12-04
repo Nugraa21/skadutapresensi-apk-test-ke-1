@@ -1,4 +1,4 @@
-// pages/dashboard_page.dart (tetap sama)
+// pages/dashboard_page.dart (UPDATED: Added Rekap menu for admin/superadmin; simplified UI, larger buttons/text for older users)
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 
@@ -10,7 +10,7 @@ class DashboardPage extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Dashboard'),
+        title: const Text('Dashboard', style: TextStyle(fontSize: 22)),
         backgroundColor: cs.primary,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -31,18 +31,18 @@ class DashboardPage extends StatelessWidget {
                 label: Text(
                   user.role.toUpperCase(),
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 backgroundColor: cs.primary.withOpacity(0.15),
                 side: BorderSide(color: cs.primary, width: 1.5),
-                avatar: Icon(Icons.shield, size: 16, color: cs.primary),
+                avatar: Icon(Icons.shield, size: 20, color: cs.primary),
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: const Icon(Icons.logout, size: 28),
             onPressed: () {
               Navigator.pushNamedAndRemoveUntil(
                 context,
@@ -77,9 +77,9 @@ class DashboardPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 6),
-                  Text(
+                  const Text(
                     'Selamat datang di sistem presensi Skaduta',
-                    style: TextStyle(color: Colors.grey[700], fontSize: 16),
+                    style: TextStyle(color: Colors.grey, fontSize: 18),
                   ),
                   const SizedBox(height: 30),
                 ],
@@ -111,6 +111,7 @@ class DashboardPage extends StatelessWidget {
     required String title,
     required String subtitle,
     required VoidCallback onTap,
+    Color? color,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -120,7 +121,7 @@ class DashboardPage extends StatelessWidget {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: onTap,
-          splashColor: Colors.blue.withOpacity(0.1),
+          splashColor: color?.withOpacity(0.1) ?? Colors.blue.withOpacity(0.1),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Row(
@@ -128,10 +129,14 @@ class DashboardPage extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: (color ?? Colors.blue).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(icon, size: 32, color: Colors.blue),
+                  child: Icon(
+                    icon,
+                    size: 40,
+                    color: color ?? Colors.blue,
+                  ), // Larger icon
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -141,21 +146,24 @@ class DashboardPage extends StatelessWidget {
                       Text(
                         title,
                         style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 20,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey,
+                        ),
                       ),
                     ],
                   ),
                 ),
                 const Icon(
                   Icons.arrow_forward_ios,
-                  size: 16,
+                  size: 24,
                   color: Colors.grey,
                 ),
               ],
@@ -170,13 +178,41 @@ class DashboardPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // UPDATED: 4 biasa buttons + 1 Penugasan
         _card(
-          icon: Icons.fingerprint,
-          title: 'Presensi',
-          subtitle: 'Absen masuk / pulang dengan lokasi & selfie',
-          onTap: () {
-            Navigator.pushNamed(context, '/presensi', arguments: user);
-          },
+          icon: Icons.login,
+          title: 'Absen Masuk Biasa',
+          subtitle: 'Absen masuk harian (otomatis disetujui)',
+          onTap: () => _navigateToPresensi(context, 'Masuk'),
+          color: Colors.green,
+        ),
+        _card(
+          icon: Icons.logout,
+          title: 'Absen Pulang Biasa',
+          subtitle: 'Absen pulang harian (otomatis disetujui)',
+          onTap: () => _navigateToPresensi(context, 'Pulang'),
+          color: Colors.orange,
+        ),
+        _card(
+          icon: Icons.fast_forward,
+          title: 'Pulang Cepat Biasa',
+          subtitle: 'Pulang lebih awal (otomatis disetujui)',
+          onTap: () => _navigateToPresensi(context, 'Pulang Cepat'),
+          color: Colors.blue,
+        ),
+        _card(
+          icon: Icons.block,
+          title: 'Izin Tidak Masuk',
+          subtitle: 'Ajukan izin (perlu persetujuan admin)',
+          onTap: () => _navigateToPresensi(context, 'Izin'),
+          color: Colors.red,
+        ),
+        _card(
+          icon: Icons.assignment,
+          title: 'Penugasan',
+          subtitle: 'Ajukan penugasan khusus (perlu persetujuan admin)',
+          onTap: () => _showPenugasanSheet(context), // NEW: Show sub-options
+          color: Colors.purple,
         ),
         _card(
           icon: Icons.history,
@@ -187,6 +223,104 @@ class DashboardPage extends StatelessWidget {
           },
         ),
       ],
+    );
+  }
+
+  // NEW: Navigate helper
+  void _navigateToPresensi(BuildContext context, String jenis) {
+    Navigator.pushNamed(
+      context,
+      '/presensi',
+      arguments: {'user': user, 'jenis': jenis},
+    );
+  }
+
+  // NEW: Bottom sheet for Penugasan sub-options
+  void _showPenugasanSheet(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Pilih Jenis Penugasan',
+              style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            _subCard(
+              icon: Icons.login,
+              title: 'Absen Masuk Penugasan',
+              onTap: () {
+                Navigator.pop(ctx);
+                _navigateToPresensi(ctx, 'Penugasan_Masuk');
+              },
+              color: Colors.green,
+            ),
+            _subCard(
+              icon: Icons.logout,
+              title: 'Absen Pulang Penugasan',
+              onTap: () {
+                Navigator.pop(ctx);
+                _navigateToPresensi(ctx, 'Penugasan_Pulang');
+              },
+              color: Colors.orange,
+            ),
+            _subCard(
+              icon: Icons.assignment_turned_in,
+              title: 'Penugasan Full Day',
+              onTap: () {
+                Navigator.pop(ctx);
+                _navigateToPresensi(ctx, 'Penugasan_Full');
+              },
+              color: Colors.purple,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _subCard({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    required Color color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 32),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(title, style: const TextStyle(fontSize: 18)),
+                ),
+                const Icon(Icons.arrow_forward_ios, size: 24),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -208,6 +342,14 @@ class DashboardPage extends StatelessWidget {
           subtitle: 'Setujui / tolak presensi user secara global',
           onTap: () {
             Navigator.pushNamed(context, '/admin-presensi');
+          },
+        ),
+        _card(
+          icon: Icons.table_chart,
+          title: 'Rekap Absensi',
+          subtitle: 'Lihat rekap presensi semua user',
+          onTap: () {
+            Navigator.pushNamed(context, '/rekap');
           },
         ),
       ],
@@ -240,6 +382,14 @@ class DashboardPage extends StatelessWidget {
           subtitle: 'Setujui / tolak presensi user secara global',
           onTap: () {
             Navigator.pushNamed(context, '/admin-presensi');
+          },
+        ),
+        _card(
+          icon: Icons.table_chart,
+          title: 'Rekap Absensi',
+          subtitle: 'Lihat rekap presensi semua user',
+          onTap: () {
+            Navigator.pushNamed(context, '/rekap');
           },
         ),
       ],

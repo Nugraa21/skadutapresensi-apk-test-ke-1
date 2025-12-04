@@ -1,17 +1,18 @@
-// pages/user_management_page.dart (update handle response uniform)
-import 'dart:convert';
+// lib/pages/user_management_page.dart
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
 
 class UserManagementPage extends StatefulWidget {
   const UserManagementPage({super.key});
+
   @override
   State<UserManagementPage> createState() => _UserManagementPageState();
 }
 
 class _UserManagementPageState extends State<UserManagementPage> {
-  bool _isLoading = false;
+  bool _loading = true;
   List<dynamic> _users = [];
+
   @override
   void initState() {
     super.initState();
@@ -19,25 +20,24 @@ class _UserManagementPageState extends State<UserManagementPage> {
   }
 
   Future<void> _loadUsers() async {
-    setState(() => _isLoading = true);
+    setState(() => _loading = true);
     try {
       final data = await ApiService.getUsers();
       setState(() => _users = data);
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Gagal memuat user: $e')));
-      }
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _deleteUser(String id, String role) async {
     if (role == 'superadmin') {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Tidak boleh menghapus superadmin')),
+        const SnackBar(content: Text('Tidak boleh hapus superadmin')),
       );
       return;
     }
@@ -45,7 +45,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
       context: context,
       builder: (_) => AlertDialog(
         title: const Text('Hapus User'),
-        content: const Text('Yakin ingin menghapus user ini?'),
+        content: const Text('Yakin ingin menghapus?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -59,6 +59,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
       ),
     );
     if (confirm != true) return;
+
     final res = await ApiService.deleteUser(id);
     ScaffoldMessenger.of(
       context,
@@ -68,54 +69,51 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
   Future<void> _editUser(Map<String, dynamic> user) async {
     final usernameC = TextEditingController(text: user['username']);
-    final namaC = TextEditingController(text: user['nama_lengkap']);
-    final passwordC = TextEditingController(); // Baru untuk password
+    final namaC = TextEditingController(text: user['nama_lengkap'] ?? '');
+    final passC = TextEditingController();
+
     final saved = await showModalBottomSheet<bool>(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(18)),
-      ),
-      builder: (ctx) {
-        final bottom = MediaQuery.of(ctx).viewInsets.bottom;
-        return Padding(
-          padding: EdgeInsets.fromLTRB(16, 16, 16, bottom + 16),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               const Text(
                 'Edit User',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               TextField(
                 controller: usernameC,
                 decoration: const InputDecoration(
                   labelText: 'Username',
-                  prefixIcon: Icon(Icons.person_outline),
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
                 controller: namaC,
                 decoration: const InputDecoration(
                   labelText: 'Nama Lengkap',
-                  prefixIcon: Icon(Icons.badge_outlined),
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               TextField(
-                controller: passwordC,
+                controller: passC,
                 obscureText: true,
                 decoration: const InputDecoration(
                   labelText: 'Password Baru (kosongkan jika tidak ganti)',
-                  prefixIcon: Icon(Icons.lock_outline),
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
@@ -124,21 +122,19 @@ class _UserManagementPageState extends State<UserManagementPage> {
                       id: user['id'].toString(),
                       username: usernameC.text.trim(),
                       namaLengkap: namaC.text.trim(),
-                      password: passwordC.text.trim(),
+                      password: passC.text.isEmpty ? null : passC.text.trim(),
                     );
-                    final ok = res['status'] == 'success';
-                    if (ctx.mounted) {
-                      Navigator.pop(ctx, ok);
-                    }
+                    Navigator.pop(ctx, res['status'] == 'success');
                   },
-                  child: const Text('Simpan Perubahan'),
+                  child: const Text('Simpan'),
                 ),
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
+
     if (saved == true) {
       _loadUsers();
       ScaffoldMessenger.of(
@@ -150,97 +146,65 @@ class _UserManagementPageState extends State<UserManagementPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kelola User & Admin'),
         backgroundColor: cs.primary,
         foregroundColor: Colors.white,
-        elevation: 0,
       ),
-      body: _isLoading
+      body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadUsers,
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: _users.length,
-                itemBuilder: (ctx, index) {
-                  final u = _users[index];
-                  final role = (u['role'] ?? '').toString();
-                  Color badgeColor;
-                  String roleLabel;
-                  switch (role) {
-                    case 'admin':
-                      badgeColor = Colors.blue;
-                      roleLabel = 'ADMIN';
-                      break;
-                    case 'superadmin':
-                      badgeColor = Colors.red;
-                      roleLabel = 'SUPERADMIN';
-                      break;
-                    default:
-                      badgeColor = Colors.green;
-                      roleLabel = 'USER';
-                  }
+                itemBuilder: (_, i) {
+                  final u = _users[i];
+                  final role = (u['role'] ?? 'user').toString().toLowerCase();
+                  final badgeColor = role == 'superadmin'
+                      ? Colors.red
+                      : role == 'admin'
+                      ? Colors.blue
+                      : Colors.green;
+                  final label = role == 'superadmin'
+                      ? 'SUPER'
+                      : role == 'admin'
+                      ? 'ADMIN'
+                      : 'USER';
+
                   return Card(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 2,
                     margin: const EdgeInsets.symmetric(vertical: 8),
                     child: ListTile(
                       leading: CircleAvatar(
                         backgroundColor: badgeColor.withOpacity(0.2),
                         child: Text(
-                          (u['username'] ?? '?')
-                              .toString()
-                              .substring(0, 1)
-                              .toUpperCase(),
+                          (u['username'] ?? '?')[0].toUpperCase(),
                           style: TextStyle(color: badgeColor),
                         ),
                       ),
-                      title: Text(u['nama_lengkap'] ?? ''),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(u['username'] ?? ''),
-                          if ((u['nip_nisn'] ?? '').toString().isNotEmpty)
-                            Text(
-                              'NIP/NISN: ${u['nip_nisn']}',
-                              style: const TextStyle(fontSize: 11),
-                            ),
-                        ],
+                      title: Text(
+                        u['nama_lengkap'] ?? 'Tanpa Nama',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      trailing: Wrap(
-                        spacing: 4,
+                      subtitle: Text(u['username'] ?? ''),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: badgeColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              roleLabel,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: badgeColor,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                          Chip(
+                            label: Text(label),
+                            backgroundColor: badgeColor.withOpacity(0.2),
+                            labelStyle: TextStyle(color: badgeColor),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.edit_outlined),
+                            icon: const Icon(Icons.edit),
                             onPressed: () => _editUser(u),
                           ),
                           IconButton(
-                            icon: const Icon(Icons.delete_outline),
+                            icon: const Icon(Icons.delete, color: Colors.red),
                             onPressed: () =>
                                 _deleteUser(u['id'].toString(), role),
-                            color: cs.error,
                           ),
                         ],
                       ),

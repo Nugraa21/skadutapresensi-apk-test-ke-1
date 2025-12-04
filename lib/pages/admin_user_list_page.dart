@@ -1,20 +1,21 @@
-// pages/admin_user_list_page.dart (tetap sama, sudah OK)
-import 'dart:convert';
+// lib/pages/admin_user_list_page.dart
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
 import 'admin_user_detail_page.dart';
 
 class AdminUserListPage extends StatefulWidget {
   const AdminUserListPage({super.key});
+
   @override
   State<AdminUserListPage> createState() => _AdminUserListPageState();
 }
 
 class _AdminUserListPageState extends State<AdminUserListPage> {
-  bool _loading = false;
+  bool _loading = true;
   List<dynamic> _users = [];
   List<dynamic> _filteredUsers = [];
   final TextEditingController _searchC = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -24,6 +25,7 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
 
   @override
   void dispose() {
+    _searchC.removeListener(_filterUsers);
     _searchC.dispose();
     super.dispose();
   }
@@ -32,29 +34,23 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
     setState(() => _loading = true);
     try {
       final data = await ApiService.getUsers();
-      if (data == null || data.isEmpty) {
-        setState(() {
-          _users = [];
-          _filteredUsers = [];
-        });
-        return;
-      }
-      final filteredUsers = data.where((u) {
-        final role = u['role']?.toString().toLowerCase() ?? '';
-        final id = u['id']?.toString();
-        final nama = u['nama_lengkap'] ?? u['nama'] ?? '';
-        return role == 'user' && id != null && id.isNotEmpty && nama.isNotEmpty;
-      }).toList();
+      final filtered = (data as List)
+          .where(
+            (u) =>
+                (u['role']?.toString().toLowerCase() ?? '') == 'user' &&
+                (u['id']?.toString().isNotEmpty ?? false),
+          )
+          .toList();
+
       setState(() {
-        _users = filteredUsers;
-        _filteredUsers = filteredUsers;
+        _users = filtered;
+        _filteredUsers = filtered;
       });
     } catch (e) {
-      debugPrint('Error loading users: $e');
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Gagal memuat list user: $e')));
+        ).showSnackBar(SnackBar(content: Text('Gagal memuat user: $e')));
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -63,74 +59,58 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
 
   void _filterUsers() {
     final query = _searchC.text.toLowerCase().trim();
-    if (query.isEmpty) {
-      setState(() => _filteredUsers = _users);
-      return;
-    }
     setState(() {
-      _filteredUsers = _users.where((u) {
-        final nama = (u['nama_lengkap'] ?? u['nama'] ?? '').toLowerCase();
-        final username = (u['username'] ?? '').toLowerCase();
-        return nama.contains(query) || username.contains(query);
-      }).toList();
+      _filteredUsers = query.isEmpty
+          ? _users
+          : _users.where((u) {
+              final nama = (u['nama_lengkap'] ?? u['nama'] ?? '')
+                  .toString()
+                  .toLowerCase();
+              final username = (u['username'] ?? '').toString().toLowerCase();
+              return nama.contains(query) || username.contains(query);
+            }).toList();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kelola User Presensi'),
         backgroundColor: cs.primary,
         foregroundColor: Colors.white,
-        elevation: 0,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _loadUsers,
-          ),
+          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadUsers),
         ],
       ),
       body: Column(
         children: [
-          Container(
+          Padding(
             padding: const EdgeInsets.all(16),
             child: TextField(
               controller: _searchC,
               decoration: InputDecoration(
-                hintText: 'Cari user berdasarkan nama atau username...',
-                prefixIcon: Icon(Icons.search, color: cs.primary),
+                hintText: 'Cari nama atau username...',
+                prefixIcon: const Icon(Icons.search),
                 suffixIcon: _searchC.text.isNotEmpty
                     ? IconButton(
                         icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchC.clear();
-                          _filterUsers();
-                        },
+                        onPressed: _searchC.clear,
                       )
                     : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: cs.primary.withOpacity(0.5)),
                 ),
                 filled: true,
-                fillColor: Colors.grey[50],
+                fillColor: Colors.grey.shade50,
               ),
             ),
           ),
           Expanded(
             child: _loading
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        CircularProgressIndicator(),
-                        SizedBox(height: 16),
-                        Text('Memuat users...'),
-                      ],
-                    ),
-                  )
+                ? const Center(child: CircularProgressIndicator())
                 : RefreshIndicator(
                     onRefresh: _loadUsers,
                     child: _filteredUsers.isEmpty
@@ -141,40 +121,32 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
                                 Icon(
                                   Icons.people_outline,
                                   size: 80,
-                                  color: Colors.grey[400],
+                                  color: Colors.grey.shade400,
                                 ),
                                 const SizedBox(height: 16),
                                 Text(
                                   _searchC.text.isNotEmpty
-                                      ? 'Tidak ditemukan user'
-                                      : 'Belum ada user terdaftar',
+                                      ? 'Tidak ditemukan'
+                                      : 'Belum ada user',
                                   style: TextStyle(
-                                    fontSize: 18,
-                                    color: Colors.grey[600],
+                                    fontSize: 20,
+                                    color: Colors.grey.shade600,
                                   ),
                                 ),
-                                if (_searchC.text.isEmpty) ...[
-                                  const SizedBox(height: 8),
-                                  ElevatedButton(
-                                    onPressed: _loadUsers,
-                                    child: const Text('Refresh'),
-                                  ),
-                                ],
                               ],
                             ),
                           )
-                        : ListView.separated(
-                            padding: const EdgeInsets.all(16),
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
                             itemCount: _filteredUsers.length,
-                            separatorBuilder: (ctx, i) =>
-                                const SizedBox(height: 8),
                             itemBuilder: (ctx, i) {
                               final u = _filteredUsers[i];
                               final nama =
                                   u['nama_lengkap'] ?? u['nama'] ?? 'Unknown';
                               final username = u['username'] ?? '';
                               final nip = u['nip_nisn']?.toString() ?? '';
-                              final userId = u['id']?.toString() ?? '';
+                              final userId = u['id'].toString();
+
                               return Card(
                                 elevation: 4,
                                 shape: RoundedRectangleBorder(
@@ -182,26 +154,21 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
                                 ),
                                 child: InkWell(
                                   borderRadius: BorderRadius.circular(16),
-                                  onTap: userId.isNotEmpty
-                                      ? () {
-                                          Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  AdminUserDetailPage(
-                                                    userId: userId,
-                                                    userName: nama,
-                                                  ),
-                                            ),
-                                          );
-                                        }
-                                      : null,
+                                  onTap: () => Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => AdminUserDetailPage(
+                                        userId: userId,
+                                        userName: nama,
+                                      ),
+                                    ),
+                                  ),
                                   child: Padding(
                                     padding: const EdgeInsets.all(16),
                                     child: Row(
                                       children: [
                                         CircleAvatar(
-                                          radius: 30,
+                                          radius: 32,
                                           backgroundColor: cs.primary
                                               .withOpacity(0.1),
                                           child: Text(
@@ -209,7 +176,7 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
                                                 ? username[0].toUpperCase()
                                                 : 'U',
                                             style: TextStyle(
-                                              fontSize: 20,
+                                              fontSize: 28,
                                               fontWeight: FontWeight.bold,
                                               color: cs.primary,
                                             ),
@@ -232,23 +199,22 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
                                               Text(
                                                 'Username: $username',
                                                 style: TextStyle(
-                                                  color: Colors.grey[600],
+                                                  color: Colors.grey.shade600,
                                                 ),
                                               ),
                                               if (nip.isNotEmpty)
                                                 Text(
                                                   'NIP/NISN: $nip',
                                                   style: TextStyle(
-                                                    color: Colors.grey[600],
+                                                    color: Colors.grey.shade600,
                                                   ),
                                                 ),
                                             ],
                                           ),
                                         ),
-                                        Icon(
+                                        const Icon(
                                           Icons.arrow_forward_ios,
-                                          color: cs.primary,
-                                          size: 20,
+                                          color: Colors.grey,
                                         ),
                                       ],
                                     ),

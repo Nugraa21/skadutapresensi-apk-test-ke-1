@@ -1,4 +1,4 @@
-// pages/register_page.dart (tetap sama)
+// pages/register_page.dart (UPDATED: Larger fonts, high contrast)
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
 
@@ -15,7 +15,7 @@ class _RegisterPageState extends State<RegisterPage> {
   final _nipNisnC = TextEditingController();
   final _passwordC = TextEditingController();
   String _role = 'user';
-  bool _isKaryawan = false;
+  bool _isKaryawan = false; // Controls NIP requirement
   bool _isLoading = false;
   bool _obscure = true;
   Future<void> _handleRegister() async {
@@ -25,14 +25,20 @@ class _RegisterPageState extends State<RegisterPage> {
       final res = await ApiService.register(
         username: _usernameC.text.trim(),
         namaLengkap: _namaC.text.trim(),
-        nipNisn: _isKaryawan ? '' : _nipNisnC.text.trim(),
+        nipNisn: _isKaryawan ? '' : _nipNisnC.text.trim(), // Empty if karyawan
         password: _passwordC.text.trim(),
         role: _role,
+        isKaryawan: _isKaryawan, // NEW: Send to PHP
       );
       if (res['status'] == 'success') {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Registrasi berhasil, silakan login')),
+          const SnackBar(
+            content: Text(
+              'Registrasi berhasil, silakan login',
+              style: TextStyle(fontSize: 18),
+            ),
+          ),
         );
         Navigator.pop(context);
       } else {
@@ -46,7 +52,9 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _showSnack(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg, style: const TextStyle(fontSize: 18))),
+    );
   }
 
   @override
@@ -64,7 +72,7 @@ class _RegisterPageState extends State<RegisterPage> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Daftar Akun'),
+        title: const Text('Daftar Akun', style: TextStyle(fontSize: 22)),
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.white,
@@ -121,20 +129,20 @@ class _RegisterPageState extends State<RegisterPage> {
                         child: Column(
                           children: [
                             const SizedBox(height: 8),
-                            Text(
+                            const Text(
                               'Buat Akun Baru',
                               style: TextStyle(
-                                fontSize: 24,
+                                fontSize: 28,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text(
+                            const Text(
                               'Bergabunglah dengan Skaduta Presensi',
                               style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.white.withOpacity(0.9),
+                                fontSize: 18,
+                                color: Colors.white,
                               ),
                             ),
                           ],
@@ -169,13 +177,16 @@ class _RegisterPageState extends State<RegisterPage> {
                                   prefixIcon: Icon(
                                     Icons.person_outline,
                                     color: cs.primary,
+                                    size: 32,
                                   ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   filled: true,
                                   fillColor: Colors.white.withOpacity(0.7),
+                                  labelStyle: const TextStyle(fontSize: 18),
                                 ),
+                                style: const TextStyle(fontSize: 18),
                                 validator: (v) {
                                   if (v == null || v.trim().isEmpty) {
                                     return 'Username wajib diisi';
@@ -191,13 +202,16 @@ class _RegisterPageState extends State<RegisterPage> {
                                   prefixIcon: Icon(
                                     Icons.badge_outlined,
                                     color: cs.primary,
+                                    size: 32,
                                   ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   filled: true,
                                   fillColor: Colors.white.withOpacity(0.7),
+                                  labelStyle: const TextStyle(fontSize: 18),
                                 ),
+                                style: const TextStyle(fontSize: 18),
                                 validator: (v) {
                                   if (v == null || v.trim().isEmpty) {
                                     return 'Nama wajib diisi';
@@ -220,13 +234,13 @@ class _RegisterPageState extends State<RegisterPage> {
                                   onChanged: (val) {
                                     setState(() => _isKaryawan = val ?? false);
                                   },
-                                  title: Text(
+                                  title: const Text(
                                     'Saya Karyawan',
-                                    style: TextStyle(color: cs.primary),
+                                    style: TextStyle(fontSize: 18),
                                   ),
                                   subtitle: const Text(
                                     'Jika karyawan, NIP/NISN boleh dikosongkan',
-                                    style: TextStyle(fontSize: 12),
+                                    style: TextStyle(fontSize: 16),
                                   ),
                                   controlAffinity:
                                       ListTileControlAffinity.leading,
@@ -243,13 +257,16 @@ class _RegisterPageState extends State<RegisterPage> {
                                     prefixIcon: Icon(
                                       Icons.credit_card_outlined,
                                       color: cs.primary,
+                                      size: 32,
                                     ),
                                     border: OutlineInputBorder(
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     filled: true,
                                     fillColor: Colors.white.withOpacity(0.7),
+                                    labelStyle: const TextStyle(fontSize: 18),
                                   ),
+                                  style: const TextStyle(fontSize: 18),
                                   validator: (v) {
                                     if (!_isKaryawan) {
                                       if (v == null || v.trim().isEmpty) {
@@ -269,6 +286,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                   prefixIcon: Icon(
                                     Icons.lock_outline,
                                     color: cs.primary,
+                                    size: 32,
                                   ),
                                   suffixIcon: IconButton(
                                     icon: Icon(
@@ -286,7 +304,9 @@ class _RegisterPageState extends State<RegisterPage> {
                                   ),
                                   filled: true,
                                   fillColor: Colors.white.withOpacity(0.7),
+                                  labelStyle: const TextStyle(fontSize: 18),
                                 ),
+                                style: const TextStyle(fontSize: 18),
                                 validator: (v) {
                                   if (v == null || v.isEmpty) {
                                     return 'Password wajib diisi';
@@ -305,25 +325,37 @@ class _RegisterPageState extends State<RegisterPage> {
                                   prefixIcon: Icon(
                                     Icons.security_outlined,
                                     color: cs.primary,
+                                    size: 32,
                                   ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   filled: true,
                                   fillColor: Colors.white.withOpacity(0.7),
+                                  labelStyle: const TextStyle(fontSize: 18),
                                 ),
+                                style: const TextStyle(fontSize: 18),
                                 items: const [
                                   DropdownMenuItem(
                                     value: 'user',
-                                    child: Text('User (Guru / Karyawan)'),
+                                    child: Text(
+                                      'User (Guru / Karyawan)',
+                                      style: TextStyle(fontSize: 18),
+                                    ),
                                   ),
                                   DropdownMenuItem(
                                     value: 'admin',
-                                    child: Text('Admin'),
+                                    child: Text(
+                                      'Admin',
+                                      style: TextStyle(fontSize: 18),
+                                    ),
                                   ),
                                   DropdownMenuItem(
                                     value: 'superadmin',
-                                    child: Text('Super Admin'),
+                                    child: Text(
+                                      'Super Admin',
+                                      style: TextStyle(fontSize: 18),
+                                    ),
                                   ),
                                 ],
                                 onChanged: (val) {
@@ -366,7 +398,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                           'Daftar Sekarang',
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 16,
+                                            fontSize: 20,
                                           ),
                                         ),
                                 ),
@@ -386,4 +418,3 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 }
-// 

@@ -1,9 +1,10 @@
-// pages/admin_presensi_page.dart (update handle response dari getAllPresensi yang sekarang return List dari data["data"])
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../api/api_service.dart';
 
 class AdminPresensiPage extends StatefulWidget {
   const AdminPresensiPage({super.key});
+
   @override
   State<AdminPresensiPage> createState() => _AdminPresensiPageState();
 }
@@ -11,7 +12,8 @@ class AdminPresensiPage extends StatefulWidget {
 class _AdminPresensiPageState extends State<AdminPresensiPage> {
   bool _loading = false;
   List<dynamic> _items = [];
-  String _filterStatus = 'All'; // All, Pending, Disetujui, Ditolak
+  String _filterStatus = 'All';
+
   @override
   void initState() {
     super.initState();
@@ -41,12 +43,28 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
         .toList();
   }
 
+  // 🟢 FIXED: Tidak akan error meskipun text lebih pendek dari maxLength
+  String _shortenText(String text, {int maxLength = 50}) {
+    if (text.isEmpty) return '';
+    if (text.length <= maxLength) return text;
+    return text.substring(0, maxLength.clamp(0, text.length)) + '...';
+  }
+
   Future<void> _showDetailDialog(dynamic item) async {
     final status = item['status'] ?? 'Pending';
     final baseUrl = ApiService.baseUrl;
-    final fotoUrl = item['selfie'] != null && item['selfie'].isNotEmpty
-        ? '$baseUrl/selfie/${item['selfie']}'
+
+    final selfie = item['selfie'];
+    final dokumen = item['dokumen'];
+
+    final String? fotoUrl = selfie != null && selfie.toString().isNotEmpty
+        ? '$baseUrl/selfie/$selfie'
         : null;
+
+    final String? dokumenUrl = dokumen != null && dokumen.toString().isNotEmpty
+        ? '$baseUrl/dokumen/$dokumen'
+        : null;
+
     showDialog(
       context: context,
       builder: (context) => AnimatedPadding(
@@ -69,10 +87,14 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                     : status == 'Ditolak'
                     ? Colors.red
                     : Colors.orange,
+                size: 32,
               ),
               const SizedBox(width: 8),
               Expanded(
-                child: Text('${item['nama_lengkap']} - ${item['jenis']}'),
+                child: Text(
+                  '${item['nama_lengkap']} - ${item['jenis']}',
+                  style: const TextStyle(fontSize: 20),
+                ),
               ),
             ],
           ),
@@ -81,14 +103,31 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Tanggal: ${item['created_at'] ?? ''}'),
+                Text(
+                  'Tanggal: ${item['created_at'] ?? ''}',
+                  style: const TextStyle(fontSize: 18),
+                ),
                 const SizedBox(height: 8),
-                Text('Keterangan: ${item['keterangan'] ?? '-'}'),
+                Text(
+                  'Keterangan: ${item['keterangan'] ?? '-'}',
+                  style: const TextStyle(fontSize: 18),
+                ),
+                if (item['informasi'] != null &&
+                    item['informasi'].toString().isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Informasi Penugasan: ${item['informasi']}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 if (fotoUrl != null) ...[
                   const Text(
                     'Foto Presensi:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
                   ),
                   const SizedBox(height: 8),
                   GestureDetector(
@@ -131,15 +170,55 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.image_not_supported, color: Colors.grey),
+                        Icon(
+                          Icons.image_not_supported,
+                          color: Colors.grey,
+                          size: 32,
+                        ),
                         SizedBox(width: 8),
                         Text(
                           'Tidak ada foto',
-                          style: TextStyle(color: Colors.grey),
+                          style: TextStyle(color: Colors.grey, fontSize: 18),
                         ),
                       ],
                     ),
                   ),
+                if (dokumenUrl != null) ...[
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Dokumen Penugasan:',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                  ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () => _showFullDokumen(dokumenUrl),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue[50],
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.blue),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.attachment,
+                            color: Colors.blue,
+                            size: 32,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Lihat Dokumen (${item['dokumen']})',
+                              style: const TextStyle(fontSize: 18),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 8),
                 Text(
                   'Status Saat Ini: $status',
@@ -150,6 +229,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                         : status == 'Ditolak'
                         ? Colors.red
                         : Colors.orange,
+                    fontSize: 18,
                   ),
                 ),
               ],
@@ -164,7 +244,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                 },
                 child: const Text(
                   'Setujui',
-                  style: TextStyle(color: Colors.green),
+                  style: TextStyle(color: Colors.green, fontSize: 18),
                 ),
               ),
               TextButton(
@@ -172,12 +252,15 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                   Navigator.pop(context);
                   _updateStatus(item['id'].toString(), 'Ditolak');
                 },
-                child: const Text('Tolak', style: TextStyle(color: Colors.red)),
+                child: const Text(
+                  'Tolak',
+                  style: TextStyle(color: Colors.red, fontSize: 18),
+                ),
               ),
             ] else
               TextButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Tutup'),
+                child: const Text('Tutup', style: TextStyle(fontSize: 18)),
               ),
           ],
         ),
@@ -190,6 +273,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.black,
+        insetPadding: const EdgeInsets.all(16),
         child: Stack(
           children: [
             Center(
@@ -198,8 +282,8 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
               ),
             ),
             Positioned(
-              top: 40,
-              right: 20,
+              top: 16,
+              right: 16,
               child: IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
                 onPressed: () => Navigator.pop(context),
@@ -211,11 +295,102 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
     );
   }
 
+  Future<void> _launchInBrowser(String url) async {
+    final uri = Uri.parse(url);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Tidak dapat membuka dokumen')),
+      );
+    }
+  }
+
+  void _showFullDokumen(String url) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.9,
+          height: MediaQuery.of(context).size.height * 0.7,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                color: Theme.of(context).colorScheme.primary,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Dokumen',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(
+                            Icons.open_in_browser,
+                            color: Colors.white,
+                          ),
+                          onPressed: () => _launchInBrowser(url),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Center(
+                  child: InteractiveViewer(
+                    child: Image.network(
+                      url,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.insert_drive_file, size: 64),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Dokumen tidak dapat ditampilkan di sini.',
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 8),
+                            ElevatedButton.icon(
+                              onPressed: () => _launchInBrowser(url),
+                              icon: const Icon(Icons.open_in_browser),
+                              label: const Text('Buka di Browser'),
+                            ),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _updateStatus(String id, String status) async {
     try {
       final res = await ApiService.updatePresensiStatus(id: id, status: status);
       if (res['status'] == true) {
-        // Konsisten dengan PHP response
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(res['message'] ?? 'Status diperbarui'),
@@ -238,6 +413,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Persetujuan Presensi'),
@@ -247,12 +423,15 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
         actions: [
           DropdownButton<String>(
             value: _filterStatus,
-            items: [
-              'All',
-              'Pending',
-              'Disetujui',
-              'Ditolak',
-            ].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+            underline: const SizedBox(),
+            items: ['All', 'Pending', 'Disetujui', 'Ditolak']
+                .map(
+                  (s) => DropdownMenuItem(
+                    value: s,
+                    child: Text(s, style: const TextStyle(fontSize: 18)),
+                  ),
+                )
+                .toList(),
             onChanged: (v) => setState(() => _filterStatus = v ?? 'All'),
           ),
         ],
@@ -263,7 +442,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
             padding: const EdgeInsets.all(16),
             child: Text(
               'Total: ${_filteredItems.length}',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
             ),
           ),
           Expanded(
@@ -277,19 +456,22 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                       itemBuilder: (ctx, i) {
                         final item = _filteredItems[i];
                         final status = item['status'] ?? 'Pending';
-                        Color statusColor;
-                        if (status == 'Disetujui') {
-                          statusColor = Colors.green;
-                        } else if (status == 'Ditolak') {
-                          statusColor = Colors.red;
-                        } else {
-                          statusColor = Colors.orange;
-                        }
+
+                        Color statusColor = status == 'Disetujui'
+                            ? Colors.green
+                            : status == 'Ditolak'
+                            ? Colors.red
+                            : Colors.orange;
+
                         final baseUrl = ApiService.baseUrl;
-                        final fotoUrl =
-                            item['selfie'] != null && item['selfie'].isNotEmpty
-                            ? '$baseUrl/selfie/${item['selfie']}'
+                        final selfie = item['selfie'];
+                        final String? fotoUrl =
+                            selfie != null && selfie.toString().isNotEmpty
+                            ? '$baseUrl/selfie/$selfie'
                             : null;
+
+                        final informasi = item['informasi']?.toString() ?? '';
+
                         return Card(
                           elevation: 2,
                           shape: RoundedRectangleBorder(
@@ -302,17 +484,29 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                               '${item['nama_lengkap'] ?? ''} - ${item['jenis'] ?? ''}',
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
+                                fontSize: 18,
                               ),
                             ),
                             subtitle: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Tgl: ${item['created_at'] ?? ''}'),
-                                Text('Ket: ${item['keterangan'] ?? '-'}'),
+                                Text(
+                                  'Tgl: ${item['created_at'] ?? ''}',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                Text(
+                                  'Ket: ${item['keterangan'] ?? '-'}',
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                                if (informasi.isNotEmpty)
+                                  Text(
+                                    'Info: ${_shortenText(informasi)}',
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
                                 Text(
                                   'Status: $status',
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 16,
                                     fontWeight: FontWeight.bold,
                                     color: statusColor,
                                   ),
@@ -371,7 +565,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                             trailing: status == 'Pending'
                                 ? const Icon(
                                     Icons.arrow_forward_ios,
-                                    size: 16,
+                                    size: 20,
                                     color: Colors.orange,
                                   )
                                 : Icon(
@@ -379,6 +573,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                                         ? Icons.check_circle
                                         : Icons.cancel,
                                     color: statusColor,
+                                    size: 32,
                                   ),
                           ),
                         );
