@@ -1,0 +1,83 @@
+# name: skadutapresensi
+# description: "A new Flutter project."
+# publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+# version: 1.0.0+1
+
+# environment:
+#   sdk: ^3.8.1
+
+# dependencies:
+#   flutter:
+#     sdk: flutter
+
+#   # ================ menambahkan dependency ================
+#   camera: ^0.11.0+2        # untuk akses kamera
+#   geolocator: ^13.0.1      # untuk GPS / lokasi
+#   permission_handler: ^11.3.1 # untuk izin kamera & lokasi
+#   cupertino_icons: ^1.0.8
+#   # ========================================================
+
+# dev_dependencies:
+#   flutter_test:
+#     sdk: flutter
+
+#   flutter_lints: ^5.0.0
+
+# flutter:
+#   uses-material-design: true
+
+name: skadutapresensi
+description: "A new Flutter project."
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.8.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # ================ menambahkan dependency ================
+  camera: ^0.11.0+2              # untuk akses kamera
+  geolocator: ^13.0.1            # untuk GPS
+  permission_handler: ^11.3.1    # untuk izin
+  flutter_map: ^7.0.2            # map
+  latlong2: ^0.9.1               # untuk LatLng
+  cupertino_icons: ^1.0.8
+  http: ^1.6.0                 # untuk http request
+  # geolocator: ^13.0.1
+  # flutter_map: ^7.0.2
+  # latlong2: ^0.9.1
+  image_picker: ^1.1.2
+  confetti: ^0.7.0
+  url_launcher: ^6.3.0
+
+  # geolocator: ^12.0.0
+  # image_picker: ^1.0.7
+  google_maps_flutter: ^2.7.0
+  excel: ^4.0.3
+  path_provider: ^2.1.1
+  # permission_handler: ^11.0.0
+  open_file: ^3.3.2   # biar langsung buka file setelah download
+  # ========================================================
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.13.1
+
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icon/app_icon.png
+
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/app_icon.png"
