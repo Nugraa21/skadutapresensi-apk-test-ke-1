@@ -1,4 +1,4 @@
-// pages/dashboard_page.dart (UPDATED: Added Rekap menu for admin/superadmin; simplified UI, larger buttons/text for older users)
+// pages/dashboard_page.dart (UPDATED: Added Rekap menu for admin/superadmin; simplified UI, larger buttons/text for older users; enhanced with gradient bg, better padding, rounded cards, consistent styling)
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 
@@ -9,20 +9,15 @@ class DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: const Text('Dashboard', style: TextStyle(fontSize: 22)),
-        backgroundColor: cs.primary,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [cs.primary, cs.primary.withOpacity(0.8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-          ),
+        title: const Text(
+          'Dashboard',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
         ),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: Colors.white,
         actions: [
           Center(
             child: Padding(
@@ -31,18 +26,18 @@ class DashboardPage extends StatelessWidget {
                 label: Text(
                   user.role.toUpperCase(),
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 backgroundColor: cs.primary.withOpacity(0.15),
                 side: BorderSide(color: cs.primary, width: 1.5),
-                avatar: Icon(Icons.shield, size: 20, color: cs.primary),
+                avatar: Icon(Icons.shield, size: 16, color: cs.primary),
               ),
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.logout, size: 28),
+            icon: const Icon(Icons.logout_rounded, size: 28),
             onPressed: () {
               Navigator.pushNamedAndRemoveUntil(
                 context,
@@ -51,57 +46,77 @@ class DashboardPage extends StatelessWidget {
               );
             },
           ),
+          const SizedBox(width: 4),
         ],
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                cs.primary.withOpacity(0.9),
+                cs.primary.withOpacity(0.6),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
       ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [cs.primary.withOpacity(0.05), Colors.transparent],
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [cs.primary.withOpacity(0.05), Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  MediaQuery.of(context).padding.top + 100,
+                  20,
+                  20,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Halo, ${user.namaLengkap}',
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
+                        color: cs.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'Selamat datang di sistem presensi Skaduta',
+                      style: TextStyle(color: Colors.grey[600], fontSize: 18),
+                    ),
+                    const SizedBox(height: 30),
+                  ],
                 ),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Halo, ${user.namaLengkap}',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      color: cs.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Selamat datang di sistem presensi Skaduta',
-                    style: TextStyle(color: Colors.grey, fontSize: 18),
-                  ),
-                  const SizedBox(height: 30),
-                ],
+            ),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (user.role == 'user') _buildUserSection(context),
+                    if (user.role == 'admin') _buildAdminSection(context),
+                    if (user.role == 'superadmin')
+                      _buildSuperAdminSection(context),
+                    const SizedBox(height: 20),
+                  ],
+                ),
               ),
             ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (user.role == 'user') _buildUserSection(context),
-                  if (user.role == 'admin') _buildAdminSection(context),
-                  if (user.role == 'superadmin')
-                    _buildSuperAdminSection(context),
-                  const SizedBox(height: 20),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -132,11 +147,7 @@ class DashboardPage extends StatelessWidget {
                     color: (color ?? Colors.blue).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(
-                    icon,
-                    size: 40,
-                    color: color ?? Colors.blue,
-                  ), // Larger icon
+                  child: Icon(icon, size: 40, color: color ?? Colors.blue),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -153,18 +164,15 @@ class DashboardPage extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         subtitle,
-                        style: const TextStyle(
-                          fontSize: 16,
-                          color: Colors.grey,
-                        ),
+                        style: TextStyle(fontSize: 16, color: Colors.grey[600]),
                       ),
                     ],
                   ),
                 ),
-                const Icon(
-                  Icons.arrow_forward_ios,
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
                   size: 24,
-                  color: Colors.grey,
+                  color: Colors.grey[600],
                 ),
               ],
             ),
@@ -180,47 +188,48 @@ class DashboardPage extends StatelessWidget {
       children: [
         // UPDATED: 4 biasa buttons + 1 Penugasan
         _card(
-          icon: Icons.login,
+          icon: Icons.login_rounded,
           title: 'Absen Masuk Biasa',
           subtitle: 'Absen masuk harian (otomatis disetujui)',
           onTap: () => _navigateToPresensi(context, 'Masuk'),
           color: Colors.green,
         ),
         _card(
-          icon: Icons.logout,
+          icon: Icons.logout_rounded,
           title: 'Absen Pulang Biasa',
           subtitle: 'Absen pulang harian (otomatis disetujui)',
           onTap: () => _navigateToPresensi(context, 'Pulang'),
           color: Colors.orange,
         ),
         _card(
-          icon: Icons.fast_forward,
+          icon: Icons.fast_forward_rounded,
           title: 'Pulang Cepat Biasa',
           subtitle: 'Pulang lebih awal (otomatis disetujui)',
           onTap: () => _navigateToPresensi(context, 'Pulang Cepat'),
           color: Colors.blue,
         ),
         _card(
-          icon: Icons.block,
+          icon: Icons.block_rounded,
           title: 'Izin Tidak Masuk',
           subtitle: 'Ajukan izin (perlu persetujuan admin)',
           onTap: () => _navigateToPresensi(context, 'Izin'),
           color: Colors.red,
         ),
         _card(
-          icon: Icons.assignment,
+          icon: Icons.assignment_rounded,
           title: 'Penugasan',
           subtitle: 'Ajukan penugasan khusus (perlu persetujuan admin)',
           onTap: () => _showPenugasanSheet(context), // NEW: Show sub-options
           color: Colors.purple,
         ),
         _card(
-          icon: Icons.history,
+          icon: Icons.history_rounded,
           title: 'Riwayat Presensi',
           subtitle: 'Lihat riwayat presensi kamu',
           onTap: () {
             Navigator.pushNamed(context, '/history', arguments: user);
           },
+          color: Colors.indigo,
         ),
       ],
     );
@@ -254,7 +263,7 @@ class DashboardPage extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             _subCard(
-              icon: Icons.login,
+              icon: Icons.login_rounded,
               title: 'Absen Masuk Penugasan',
               onTap: () {
                 Navigator.pop(ctx);
@@ -263,7 +272,7 @@ class DashboardPage extends StatelessWidget {
               color: Colors.green,
             ),
             _subCard(
-              icon: Icons.logout,
+              icon: Icons.logout_rounded,
               title: 'Absen Pulang Penugasan',
               onTap: () {
                 Navigator.pop(ctx);
@@ -272,7 +281,7 @@ class DashboardPage extends StatelessWidget {
               color: Colors.orange,
             ),
             _subCard(
-              icon: Icons.assignment_turned_in,
+              icon: Icons.assignment_turned_in_rounded,
               title: 'Penugasan Full Day',
               onTap: () {
                 Navigator.pop(ctx);
@@ -315,7 +324,11 @@ class DashboardPage extends StatelessWidget {
                 Expanded(
                   child: Text(title, style: const TextStyle(fontSize: 18)),
                 ),
-                const Icon(Icons.arrow_forward_ios, size: 24),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 20,
+                  color: Colors.grey[600],
+                ),
               ],
             ),
           ),
@@ -329,28 +342,31 @@ class DashboardPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _card(
-          icon: Icons.list_alt,
+          icon: Icons.list_alt_rounded,
           title: 'Kelola User Presensi',
           subtitle: 'Lihat list user, histori per user, dan konfirmasi absensi',
           onTap: () {
             Navigator.pushNamed(context, '/admin-user-list');
           },
+          color: Colors.blue,
         ),
         _card(
-          icon: Icons.verified_outlined,
+          icon: Icons.verified_user_rounded,
           title: 'Konfirmasi Absensi',
           subtitle: 'Setujui / tolak presensi user secara global',
           onTap: () {
             Navigator.pushNamed(context, '/admin-presensi');
           },
+          color: Colors.green,
         ),
         _card(
-          icon: Icons.table_chart,
+          icon: Icons.table_chart_rounded,
           title: 'Rekap Absensi',
           subtitle: 'Lihat rekap presensi semua user',
           onTap: () {
             Navigator.pushNamed(context, '/rekap');
           },
+          color: Colors.indigo,
         ),
       ],
     );
@@ -361,36 +377,40 @@ class DashboardPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _card(
-          icon: Icons.supervisor_account_outlined,
+          icon: Icons.supervisor_account_rounded,
           title: 'Kelola User & Admin',
           subtitle: 'CRUD akun user dan admin, edit info, ganti password',
           onTap: () {
             Navigator.pushNamed(context, '/user-management');
           },
+          color: Colors.purple,
         ),
         _card(
-          icon: Icons.list_alt,
+          icon: Icons.list_alt_rounded,
           title: 'Kelola User Presensi',
           subtitle: 'Lihat list user, histori per user, dan konfirmasi absensi',
           onTap: () {
             Navigator.pushNamed(context, '/admin-user-list');
           },
+          color: Colors.blue,
         ),
         _card(
-          icon: Icons.verified_outlined,
+          icon: Icons.verified_user_rounded,
           title: 'Konfirmasi Absensi',
           subtitle: 'Setujui / tolak presensi user secara global',
           onTap: () {
             Navigator.pushNamed(context, '/admin-presensi');
           },
+          color: Colors.green,
         ),
         _card(
-          icon: Icons.table_chart,
+          icon: Icons.table_chart_rounded,
           title: 'Rekap Absensi',
           subtitle: 'Lihat rekap presensi semua user',
           onTap: () {
             Navigator.pushNamed(context, '/rekap');
           },
+          color: Colors.indigo,
         ),
       ],
     );

@@ -1,5 +1,5 @@
 // pages/presensi_page.dart
-// VERSI FINAL – SELFIE KAMERA FULLSCREEN + TOMBOL KIRIM SELALU KELIHATAN (FIXED!)
+// VERSI FINAL – SELFIE KAMERA FULLSCREEN + TOMBOL KIRIM SELALU KELIHATAN (ENHANCED: Modern UI, gradients, shadows, animations for better UX)
 
 import 'dart:convert';
 import 'dart:io';
@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' as lat_lng;
+import 'package:intl/intl.dart';
 
 import '../api/api_service.dart';
 import '../models/user_model.dart';
@@ -250,8 +251,8 @@ class _PresensiPageState extends State<PresensiPage>
       SnackBar(
         content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w600)),
         backgroundColor: msg.contains('SUKSES') || msg.contains('berhasil')
-            ? Colors.green.shade600
-            : Colors.red.shade600,
+            ? Colors.green[600]
+            : Colors.red[600],
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         margin: const EdgeInsets.all(16),
@@ -347,7 +348,7 @@ class _PresensiPageState extends State<PresensiPage>
                             child: Icon(
                               Icons.school_rounded,
                               size: 40,
-                              color: Colors.red.shade700,
+                              color: Colors.red[700],
                             ),
                           ),
                           const Text(
@@ -389,7 +390,7 @@ class _PresensiPageState extends State<PresensiPage>
                               child: Icon(
                                 Icons.my_location,
                                 size: 36,
-                                color: Colors.blue.shade700,
+                                color: Colors.blue[700],
                               ),
                             ),
                             const Text(
@@ -419,8 +420,8 @@ class _PresensiPageState extends State<PresensiPage>
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: inRadius
-                        ? [Colors.green.shade600, Colors.green.shade500]
-                        : [Colors.red.shade600, Colors.red.shade500],
+                        ? [Colors.green[600]!, Colors.green[500]!]
+                        : [Colors.red[600]!, Colors.red[500]!],
                   ),
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
@@ -593,7 +594,7 @@ class _PresensiPageState extends State<PresensiPage>
                             ListTile(
                               leading: Icon(
                                 Icons.camera_alt_rounded,
-                                color: Colors.red.shade600,
+                                color: Colors.red[600],
                                 size: 32,
                               ),
                               title: const Text(
@@ -643,7 +644,7 @@ class _PresensiPageState extends State<PresensiPage>
                             ListTile(
                               leading: Icon(
                                 Icons.file_present_rounded,
-                                color: Colors.red.shade600,
+                                color: Colors.red[600],
                                 size: 32,
                               ),
                               title: Text(

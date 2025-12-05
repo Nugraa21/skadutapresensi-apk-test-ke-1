@@ -1,5 +1,6 @@
 // lib/pages/admin_user_detail_page.dart
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../api/api_service.dart';
 
 class AdminUserDetailPage extends StatefulWidget {
@@ -44,7 +45,20 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
     try {
       // 1. Riwayat user
       final historyData = await ApiService.getUserHistory(widget.userId);
-      if (mounted) setState(() => _history = historyData ?? []);
+      if (mounted)
+        setState(() {
+          _history = historyData ?? [];
+          _history.sort(
+            (a, b) =>
+                DateTime.parse(
+                  b['created_at'] ?? DateTime.now().toIso8601String(),
+                ).compareTo(
+                  DateTime.parse(
+                    a['created_at'] ?? DateTime.now().toIso8601String(),
+                  ),
+                ),
+          );
+        });
 
       // 2. Cari presensi yang masih pending
       final allPresensi = await ApiService.getAllPresensi();
@@ -59,9 +73,12 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
       if (mounted) setState(() => _pendingPresensi = pending);
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal memuat data: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal memuat data: $e'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -80,16 +97,21 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: isSuccess ? Colors.green : Colors.red,
+          backgroundColor: isSuccess
+              ? Colors.green.shade600
+              : Colors.red.shade600,
         ),
       );
 
       if (isSuccess) _loadData(); // Refresh hanya jika sukses
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red.shade600,
+          ),
+        );
       }
     }
   }
@@ -105,14 +127,11 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
           children: [
             Center(
               child: InteractiveViewer(
-                child: Image.network(
-                  url,
-                  fit: BoxFit.contain, // ← ERROR DI SINI SUDAH DIPERBAIKI
-                ),
+                child: Image.network(url, fit: BoxFit.contain),
               ),
             ),
             Positioned(
-              top: 40,
+              top: 20,
               right: 20,
               child: IconButton(
                 icon: const Icon(Icons.close, color: Colors.white, size: 36),
@@ -155,18 +174,42 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
     );
   }
 
+  Icon? _getJenisIcon(String jenis) {
+    if (jenis == 'Masuk') {
+      return Icon(Icons.login_rounded, color: Colors.green, size: 24);
+    } else if (jenis == 'Pulang') {
+      return Icon(Icons.logout_rounded, color: Colors.orange, size: 24);
+    } else if (jenis == 'Izin') {
+      return Icon(Icons.sick_rounded, color: Colors.red, size: 24);
+    } else if (jenis == 'Penugasan') {
+      return Icon(Icons.assignment_rounded, color: Colors.purple, size: 24);
+    }
+    return null;
+  }
+
   Widget _buildHistoryTab() {
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_history.isEmpty) {
+    if (_loading)
       return const Center(
+        child: CircularProgressIndicator(strokeWidth: 4, color: Colors.blue),
+      );
+    if (_history.isEmpty) {
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.history, size: 80, color: Colors.grey),
+            Icon(
+              Icons.history_toggle_off_rounded,
+              size: 80,
+              color: Colors.grey[300],
+            ),
             SizedBox(height: 16),
             Text(
               'Belum ada riwayat presensi',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[500],
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -187,6 +230,11 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
               ? Colors.red
               : Colors.orange;
 
+          final created = DateTime.parse(
+            item['created_at'] ?? DateTime.now().toIso8601String(),
+          );
+          final formattedDate = DateFormat('dd MMM yyyy HH:mm').format(created);
+
           final baseUrl = ApiService.baseUrl;
           final fotoUrl = item['selfie']?.toString().isNotEmpty == true
               ? '$baseUrl/selfie/${item['selfie']}'
@@ -198,35 +246,14 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
           return Card(
             elevation: 4,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
             ),
             margin: const EdgeInsets.symmetric(vertical: 6),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(16),
-              title: Text(
-                item['jenis'] ?? 'Tidak ada jenis',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              subtitle: Column(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 6),
-                  Text('Tanggal: ${item['created_at'] ?? '-'}'),
-                  Text('Keterangan: ${item['keterangan'] ?? '-'}'),
-                  if (item['informasi']?.toString().isNotEmpty == true)
-                    Text('Info: ${item['informasi']}'),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Status: $status',
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
                   Row(
                     children: [
                       if (fotoUrl != null)
@@ -242,7 +269,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
                               errorBuilder: (_, __, ___) => Container(
                                 width: 70,
                                 height: 70,
-                                color: Colors.grey.shade200,
+                                color: Colors.grey[200],
                                 child: const Icon(
                                   Icons.broken_image,
                                   color: Colors.grey,
@@ -251,8 +278,36 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
                             ),
                           ),
                         ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item['jenis'] ?? 'Tidak ada jenis',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                            Text(
+                              'Tanggal: $formattedDate',
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                            Text(
+                              'Keterangan: ${item['keterangan'] ?? '-'}',
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                            if (item['informasi']?.toString().isNotEmpty ==
+                                true)
+                              Text(
+                                'Info: ${item['informasi']}',
+                                style: TextStyle(color: Colors.grey[600]),
+                              ),
+                          ],
+                        ),
+                      ),
                       if (dokumenUrl != null) ...[
-                        const SizedBox(width: 12),
                         GestureDetector(
                           onTap: () => _showFullDokumen(dokumenUrl),
                           child: Container(
@@ -261,9 +316,9 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
+                              color: Colors.blue[50],
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.blue.shade200),
+                              border: Border.all(color: Colors.blue.shade200!),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
@@ -288,16 +343,40 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
                       ],
                     ],
                   ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          status == 'Disetujui'
+                              ? Icons.check_circle
+                              : status == 'Ditolak'
+                              ? Icons.cancel
+                              : Icons.pending,
+                          color: statusColor,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Status: $status',
+                          style: TextStyle(
+                            color: statusColor,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ],
-              ),
-              trailing: Icon(
-                status == 'Disetujui'
-                    ? Icons.check_circle
-                    : status == 'Ditolak'
-                    ? Icons.cancel
-                    : Icons.pending,
-                color: statusColor,
-                size: 36,
               ),
             ),
           );
@@ -307,17 +386,24 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
   }
 
   Widget _buildPendingTab() {
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_pendingPresensi.isEmpty) {
+    if (_loading)
       return const Center(
+        child: CircularProgressIndicator(strokeWidth: 4, color: Colors.blue),
+      );
+    if (_pendingPresensi.isEmpty) {
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.pending_actions, size: 80, color: Colors.grey),
+            Icon(Icons.pending_actions, size: 80, color: Colors.grey[300]),
             SizedBox(height: 16),
             Text(
               'Tidak ada presensi pending',
-              style: TextStyle(fontSize: 18, color: Colors.grey),
+              style: TextStyle(
+                fontSize: 18,
+                color: Colors.grey[500],
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ],
         ),
@@ -331,6 +417,11 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
         itemCount: _pendingPresensi.length,
         itemBuilder: (_, i) {
           final item = _pendingPresensi[i];
+          final created = DateTime.parse(
+            item['created_at'] ?? DateTime.now().toIso8601String(),
+          );
+          final formattedDate = DateFormat('dd MMM yyyy HH:mm').format(created);
+
           final baseUrl = ApiService.baseUrl;
           final fotoUrl = item['selfie']?.toString().isNotEmpty == true
               ? '$baseUrl/selfie/${item['selfie']}'
@@ -342,35 +433,14 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
           return Card(
             elevation: 4,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
             ),
             margin: const EdgeInsets.symmetric(vertical: 6),
-            child: ListTile(
-              contentPadding: const EdgeInsets.all(16),
-              title: Text(
-                item['jenis'] ?? 'Tidak ada jenis',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                ),
-              ),
-              subtitle: Column(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 6),
-                  Text('Tanggal: ${item['created_at'] ?? '-'}'),
-                  Text('Keterangan: ${item['keterangan'] ?? '-'}'),
-                  if (item['informasi']?.toString().isNotEmpty == true)
-                    Text('Info: ${item['informasi']}'),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Status: Pending',
-                    style: TextStyle(
-                      color: Colors.orange,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
                   Row(
                     children: [
                       if (fotoUrl != null)
@@ -386,8 +456,36 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
                             ),
                           ),
                         ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item['jenis'] ?? 'Tidak ada jenis',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
+                            Text(
+                              'Tanggal: $formattedDate',
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                            Text(
+                              'Keterangan: ${item['keterangan'] ?? '-'}',
+                              style: TextStyle(color: Colors.grey[600]),
+                            ),
+                            if (item['informasi']?.toString().isNotEmpty ==
+                                true)
+                              Text(
+                                'Info: ${item['informasi']}',
+                                style: TextStyle(color: Colors.grey[600]),
+                              ),
+                          ],
+                        ),
+                      ),
                       if (dokumenUrl != null) ...[
-                        const SizedBox(width: 12),
                         GestureDetector(
                           onTap: () => _showFullDokumen(dokumenUrl),
                           child: Container(
@@ -396,9 +494,9 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
                               vertical: 8,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
+                              color: Colors.blue[50],
                               borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.blue.shade200),
+                              border: Border.all(color: Colors.blue.shade200!),
                             ),
                             child: const Row(
                               mainAxisSize: MainAxisSize.min,
@@ -419,24 +517,54 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
                       ],
                     ],
                   ),
-                ],
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.check_circle,
-                      color: Colors.green,
-                      size: 36,
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
                     ),
-                    onPressed: () =>
-                        _updateStatus(item['id'].toString(), 'Disetujui'),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.pending, color: Colors.orange, size: 20),
+                        SizedBox(width: 4),
+                        Text(
+                          'Status: Pending',
+                          style: TextStyle(
+                            color: Colors.orange,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.cancel, color: Colors.red, size: 36),
-                    onPressed: () =>
-                        _updateStatus(item['id'].toString(), 'Ditolak'),
+                  const SizedBox(height: 12),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () =>
+                            _updateStatus(item['id'].toString(), 'Disetujui'),
+                        icon: const Icon(Icons.check, color: Colors.white),
+                        label: const Text('Setujui'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                        ),
+                      ),
+                      ElevatedButton.icon(
+                        onPressed: () =>
+                            _updateStatus(item['id'].toString(), 'Ditolak'),
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        label: const Text('Tolak'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -452,31 +580,72 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
     final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(widget.userName),
-        backgroundColor: cs.primary,
-        foregroundColor: Colors.white,
+        title: Text(
+          widget.userName,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+        ),
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        foregroundColor: Colors.white,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadData),
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded, size: 28),
+            onPressed: _loadData,
+          ),
         ],
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                cs.primary.withOpacity(0.9),
+                cs.primary.withOpacity(0.6),
+              ],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+        ),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
           tabs: const [
-            Tab(text: 'Riwayat Presensi'),
-            Tab(text: 'Konfirmasi Pending'),
+            Tab(icon: Icon(Icons.history_rounded), text: 'Riwayat'),
+            Tab(icon: Icon(Icons.pending_actions_rounded), text: 'Pending'),
           ],
         ),
       ),
-      body: _loading && _history.isEmpty && _pendingPresensi.isEmpty
-          ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [_buildHistoryTab(), _buildPendingTab()],
-            ),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [cs.primary.withOpacity(0.05), Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: _loading && _history.isEmpty && _pendingPresensi.isEmpty
+            ? const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 4,
+                  color: Colors.blue,
+                ),
+              )
+            : Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  MediaQuery.of(context).padding.top + 130,
+                  16,
+                  16,
+                ),
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [_buildHistoryTab(), _buildPendingTab()],
+                ),
+              ),
+      ),
     );
   }
 }
