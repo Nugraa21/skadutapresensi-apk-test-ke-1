@@ -1,6 +1,4 @@
-// ============================================================================
-// KONFIGURASI BASE URL API
-// ============================================================================
+// ------------------------------- KONFIGURASI BASE URL API --------------------
 //
 // Informasi Penting:
 // 1. baseUrl di bawah menggunakan NGROK → agar API tetap online meski tidak punya server publik.
@@ -21,16 +19,12 @@
 //
 // 5. Jangan commit baseUrl sensitif ke GitHub (gunakan .env + flutter_dotenv).
 //
-// ============================================================================
 // ------------------------------- NGROK --------------------------------------
-// ============================================================================
 
 const String baseUrl =
     "https://nonlitigious-alene-uninfinitely.ngrok-free.dev/backendapk/";
 
-// ============================================================================
 // -------------------------- BASE URL VIA IP LOCAL ----------------------------
-// ============================================================================
 //
 // Gunakan ini hanya jika testing di jaringan lokal.
 // Pastikan salah satu IP aktif dan benar.
