@@ -41,27 +41,32 @@ dependencies:
     sdk: flutter
 
   # ================ menambahkan dependency ================
+
   camera: ^0.11.0+2              # untuk akses kamera
   geolocator: ^13.0.1            # untuk GPS
   permission_handler: ^11.3.1    # untuk izin
   flutter_map: ^7.0.2            # map
   latlong2: ^0.9.1               # untuk LatLng
-  cupertino_icons: ^1.0.8
-  http: ^1.6.0                 # untuk http request
+  cupertino_icons: ^1.0.8        # icon iOS  
+  http: ^1.6.0                   # untuk http request
+  image_picker: ^1.1.2           # untuk pilih gambar dari galeri
+  confetti: ^0.7.0               # untuk efek confetti
+  url_launcher: ^6.3.0           # untuk buka url
+  google_maps_flutter: ^2.7.0    # untuk google maps
+  excel: ^4.0.3                  # untuk buat file excel
+  path_provider: ^2.1.1          # untuk simpan file di device
+  open_file: ^3.3.2              # biar langsung buka file setelah download
+
+
+  # ========================================================  
+  
+  # ================ dependency lama =======================
+  # permission_handler: ^11.0.0
   # geolocator: ^13.0.1
   # flutter_map: ^7.0.2
   # latlong2: ^0.9.1
-  image_picker: ^1.1.2
-  confetti: ^0.7.0
-  url_launcher: ^6.3.0
-
   # geolocator: ^12.0.0
   # image_picker: ^1.0.7
-  google_maps_flutter: ^2.7.0
-  excel: ^4.0.3
-  path_provider: ^2.1.1
-  # permission_handler: ^11.0.0
-  open_file: ^3.3.2   # biar langsung buka file setelah download
   # ========================================================
 
 dev_dependencies:
