@@ -78,7 +78,8 @@ dependencies:
   # ========================================================
   # device_info_plus: ^10.0.0    # For generating unique device ID (used in login/register)
   shared_preferences: ^2.2.2     # For storing user data/device ID locally
-
+  # encrypt: ^5.0.1
+  crypto: ^3.0.3
 
 dev_dependencies:
   flutter_test:
