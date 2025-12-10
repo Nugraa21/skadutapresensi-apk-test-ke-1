@@ -57,10 +57,11 @@ dependencies:
   path_provider: ^2.1.1          # untuk simpan file di device
   open_file: ^3.3.2              # biar langsung buka file setelah download
   # shared_preferences: ^2.3.2   # For storing user data/device ID locally
-  encrypt: ^5.0.1                # For AES-256-CBC encryption/decryption (key: 'nugra21')
+  # encrypt: ^5.0.1                # For AES-256-CBC encryption/decryption (key: 'nugra21')
   # device_info_plus: ^10.1.2    # For generating unique device ID (used in login/register)
   # uuid: ^4.0.0                 # For generating unique IDs
-
+  encrypt: ^5.0.3
+  cryptography: ^2.7.0
   # ========================================================  
   
   # ================ dependency lama =======================
