@@ -1,3 +1,4 @@
+// lib/pages/login_page.dart
 import 'package:flutter/material.dart';
 import '../api/api_service.dart';
 import '../models/user_model.dart';
@@ -24,15 +25,8 @@ class _LoginPageState extends State<LoginPage> {
         input: _inputC.text.trim(),
         password: _passC.text.trim(),
       );
-      if (res['status'] == true) {
-        final userData = res['user'];
-        final user = UserModel(
-          id: userData['id'].toString(),
-          username: userData['username'] ?? '',
-          namaLengkap: userData['nama_lengkap'],
-          nipNisn: '',
-          role: userData['role'],
-        );
+      if (res['status'] == 'success') {
+        final user = UserModel.fromJson(res['data']);
         if (!mounted) return;
         Navigator.pushReplacementNamed(context, '/dashboard', arguments: user);
       } else {
@@ -59,6 +53,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -178,9 +173,20 @@ class _LoginPageState extends State<LoginPage> {
                         color: Colors.white.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: const Text(
-                        '• Login bisa pakai Username / NIP / NISN\n• Pastikan koneksi internet stabil',
-                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      child: RichText(
+                        // Hapus const
+                        text: const TextSpan(
+                          style: TextStyle(color: Colors.white, fontSize: 16),
+                          children: [
+                            TextSpan(
+                              text:
+                                  '• Login bisa pakai Username / NIP / NISN\n',
+                            ),
+                            TextSpan(
+                              text: '• Pastikan koneksi internet stabil',
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ],

@@ -496,19 +496,13 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
     );
   }
 
-  Future<void> _updateStatus(String id, String newStatus) async {
+  Future<void> _updateStatus(String id, String status) async {
     try {
-      final res = await ApiService.updatePresensiStatus(
-        id: id,
-        status: newStatus,
-      );
-
-      if (!mounted) return;
-
+      final res = await ApiService.updatePresensiStatus(id: id, status: status);
       if (res['status'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(res['message'] ?? 'Status berhasil diupdate'),
+            content: Text(res['message'] ?? 'Status diperbarui'),
             backgroundColor: Colors.green.shade600,
           ),
         );
@@ -520,7 +514,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
           ),
         );
       }
-      _loadPresensi(); // Refresh daftar presensi
+      _loadPresensi();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

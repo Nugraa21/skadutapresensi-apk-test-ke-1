@@ -11,54 +11,11 @@ import 'pages/admin_user_list_page.dart';
 import 'pages/admin_user_detail_page.dart';
 import 'pages/rekap_page.dart';
 import 'models/user_model.dart';
-import 'api/api_service.dart';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const SkadutaApp());
-}
+void main() => runApp(const SkadutaApp());
 
-class SkadutaApp extends StatefulWidget {
+class SkadutaApp extends StatelessWidget {
   const SkadutaApp({super.key});
-
-  @override
-  State<SkadutaApp> createState() => _SkadutaAppState();
-}
-
-class _SkadutaAppState extends State<SkadutaApp> {
-  Widget _initialPage = const Scaffold(
-    body: Center(child: CircularProgressIndicator()),
-  );
-
-  @override
-  void initState() {
-    super.initState();
-    _checkLoginStatus();
-  }
-
-  Future<void> _checkLoginStatus() async {
-    final userInfo = await ApiService.getCurrentUser();
-    if (userInfo != null) {
-      final user = UserModel(
-        id: userInfo['id']!,
-        username: '',
-        namaLengkap: userInfo['nama_lengkap']!,
-        nipNisn: '',
-        role: userInfo['role']!,
-      );
-      if (mounted) {
-        setState(() {
-          _initialPage = DashboardPage(user: user);
-        });
-      }
-    } else {
-      if (mounted) {
-        setState(() {
-          _initialPage = const LoginPage();
-        });
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -70,14 +27,14 @@ class _SkadutaAppState extends State<SkadutaApp> {
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.grey.shade50,
         textTheme: const TextTheme(bodyLarge: TextStyle(fontSize: 18)),
-        cardTheme: const CardThemeData(elevation: 6),
+        cardTheme: const CardThemeData(elevation: 6), // Fix: CardThemeData
         appBarTheme: const AppBarTheme(
           centerTitle: true,
           backgroundColor: Colors.blueGrey,
           foregroundColor: Colors.white,
         ),
       ),
-      home: _initialPage,
+      initialRoute: '/login',
       routes: {
         '/login': (_) => const LoginPage(),
         '/register': (_) => const RegisterPage(),

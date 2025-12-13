@@ -1,10 +1,10 @@
+// models/user_model.dart (NO CHANGES)
 class UserModel {
   final String id;
   final String username;
   final String namaLengkap;
   final String nipNisn;
   final String role;
-
   UserModel({
     required this.id,
     required this.username,
@@ -12,7 +12,6 @@ class UserModel {
     required this.nipNisn,
     required this.role,
   });
-
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'].toString(),

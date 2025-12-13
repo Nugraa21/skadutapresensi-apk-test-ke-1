@@ -38,8 +38,7 @@ class DashboardPage extends StatelessWidget {
           ),
           IconButton(
             icon: const Icon(Icons.logout_rounded, size: 28),
-            onPressed: () async {
-              // await ApiService.logout();
+            onPressed: () {
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 '/login',
