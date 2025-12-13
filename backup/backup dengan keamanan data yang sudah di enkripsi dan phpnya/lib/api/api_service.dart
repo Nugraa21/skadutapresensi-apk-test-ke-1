@@ -1,0 +1,246 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+import '../utils/encryption.dart';
+
+class ApiService {
+  // Ganti dengan URL ngrok kamu yang aktif
+  static const String baseUrl =
+      "https://nonlitigious-alene-uninfinitely.ngrok-free.dev/backendapk/";
+
+  // API Key harus sama persis dengan yang di config.php
+  static const String _apiKey = 'Skaduta2025!@#SecureAPIKey1234567890';
+
+  /// Header umum untuk semua request
+  static Future<Map<String, String>> _getHeaders({
+    bool withToken = true,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+
+    return {
+      'Content-Type': 'application/json',
+      'X-App-Key': _apiKey,
+      'ngrok-skip-browser-warning': 'true', // Bypass halaman warning ngrok free
+      if (withToken && token != null) 'Authorization': 'Bearer $token',
+    };
+  }
+
+  /// Dekripsi aman + debug print
+  static Map<String, dynamic> _safeDecrypt(http.Response response) {
+    try {
+      print("=== RESPONSE DEBUG ===");
+      print("STATUS CODE: ${response.statusCode}");
+      print("BODY LENGTH: ${response.body.length}");
+      print("RAW BODY: '${response.body}'");
+      print("======================");
+
+      if (response.body.isEmpty) {
+        return {"status": false, "message": "Server mengirim response kosong"};
+      }
+
+      final body = jsonDecode(response.body);
+      if (body['encrypted_data'] != null) {
+        final decryptedJson = ApiEncryption.decrypt(body['encrypted_data']);
+        return jsonDecode(decryptedJson);
+      }
+      return body as Map<String, dynamic>;
+    } catch (e) {
+      print("GAGAL PARSE JSON: $e");
+      return {"status": false, "message": "Gagal membaca respons dari server"};
+    }
+  }
+
+  // ================== GET DATA (ENKRIPSI) ==================
+  static Future<List<dynamic>> getUsers() async {
+    final headers = await _getHeaders();
+    final res = await http.get(
+      Uri.parse("$baseUrl/get_users.php"),
+      headers: headers,
+    );
+    final data = _safeDecrypt(res);
+    return List<dynamic>.from(data['data'] ?? []);
+  }
+
+  static Future<List<dynamic>> getUserHistory(String userId) async {
+    final headers = await _getHeaders();
+    final res = await http.get(
+      Uri.parse("$baseUrl/absen_history.php?user_id=$userId"),
+      headers: headers,
+    );
+    final data = _safeDecrypt(res);
+    return List<dynamic>.from(data['data'] ?? []);
+  }
+
+  static Future<List<dynamic>> getAllPresensi() async {
+    final headers = await _getHeaders();
+    final res = await http.get(
+      Uri.parse("$baseUrl/absen_admin_list.php"),
+      headers: headers,
+    );
+    final data = _safeDecrypt(res);
+    return List<dynamic>.from(data['data'] ?? []);
+  }
+
+  static Future<List<dynamic>> getRekap({String? month, String? year}) async {
+    final headers = await _getHeaders();
+    var url = "$baseUrl/presensi_rekap.php";
+    if (month != null && year != null) url += "?month=$month&year=$year";
+    final res = await http.get(Uri.parse(url), headers: headers);
+    final data = _safeDecrypt(res);
+    return List<dynamic>.from(data['data'] ?? []);
+  }
+
+  // ================== LOGIN ==================
+  static Future<Map<String, dynamic>> login({
+    required String input,
+    required String password,
+  }) async {
+    final headers = await _getHeaders(withToken: false);
+    final res = await http.post(
+      Uri.parse("$baseUrl/login.php"),
+      headers: headers,
+      body: jsonEncode({"username": input, "password": password}),
+    );
+
+    final result = _safeDecrypt(res);
+
+    // Simpan token & user info kalau login berhasil
+    if (result['status'] == true && result['token'] != null) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auth_token', result['token']);
+      await prefs.setString('user_id', result['user']['id'].toString());
+      await prefs.setString('user_name', result['user']['nama_lengkap']);
+      await prefs.setString('user_role', result['user']['role']);
+    }
+    return result;
+  }
+
+  // ================== LOGOUT ==================
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
+
+  // ================== CEK LOGIN STATUS ==================
+  static Future<bool> isLoggedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('auth_token') != null;
+  }
+
+  // ================== GET USER SAAT INI ==================
+  static Future<Map<String, String>?> getCurrentUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
+    if (token == null) return null;
+    return {
+      'id': prefs.getString('user_id') ?? '',
+      'nama_lengkap': prefs.getString('user_name') ?? '',
+      'role': prefs.getString('user_role') ?? 'user',
+    };
+  }
+
+  // ================== REGISTER ==================
+  static Future<Map<String, dynamic>> register({
+    required String username,
+    required String namaLengkap,
+    required String nipNisn,
+    required String password,
+    required String role,
+    required bool isKaryawan,
+  }) async {
+    final headers = await _getHeaders(withToken: false);
+    final res = await http.post(
+      Uri.parse("$baseUrl/register.php"),
+      headers: headers,
+      body: jsonEncode({
+        "username": username,
+        "nama_lengkap": namaLengkap,
+        "nip_nisn": nipNisn,
+        "password": password,
+        "role": role,
+        "is_karyawan": isKaryawan,
+      }),
+    );
+    return _safeDecrypt(res);
+  }
+
+  // ================== SUBMIT PRESENSI ==================
+  static Future<Map<String, dynamic>> submitPresensi({
+    required String userId,
+    required String jenis,
+    required String keterangan,
+    required String informasi,
+    required String dokumenBase64,
+    required String latitude,
+    required String longitude,
+    required String base64Image,
+  }) async {
+    final headers = await _getHeaders();
+    final res = await http.post(
+      Uri.parse("$baseUrl/absen.php"),
+      headers: headers,
+      body: jsonEncode({
+        "userId": userId,
+        "jenis": jenis,
+        "keterangan": keterangan,
+        "informasi": informasi,
+        "dokumenBase64": dokumenBase64,
+        "latitude": latitude,
+        "longitude": longitude,
+        "base64Image": base64Image,
+      }),
+    );
+    return _safeDecrypt(res);
+  }
+
+  // ================== APPROVE PRESENSI ==================
+  static Future<Map<String, dynamic>> updatePresensiStatus({
+    required String id,
+    required String status,
+  }) async {
+    final headers = await _getHeaders();
+    final res = await http.post(
+      Uri.parse("$baseUrl/presensi_approve.php"),
+      headers: headers,
+      body: jsonEncode({
+        "id": id.trim(),
+        "status": status, // "Disetujui" atau "Ditolak"
+      }),
+    );
+    return _safeDecrypt(res);
+  }
+
+  // ================== DELETE USER ==================
+  static Future<Map<String, dynamic>> deleteUser(String id) async {
+    final headers = await _getHeaders();
+    final res = await http.post(
+      Uri.parse("$baseUrl/delete_user.php"),
+      headers: headers,
+      body: jsonEncode({"id": id}),
+    );
+    return _safeDecrypt(res);
+  }
+
+  // ================== UPDATE USER ==================
+  static Future<Map<String, dynamic>> updateUser({
+    required String id,
+    required String username,
+    required String namaLengkap,
+    String? password,
+  }) async {
+    final headers = await _getHeaders();
+    final body = {
+      "id": id,
+      "username": username,
+      "nama_lengkap": namaLengkap,
+      if (password != null && password.isNotEmpty) "password": password,
+    };
+    final res = await http.post(
+      Uri.parse("$baseUrl/update_user.php"),
+      headers: headers,
+      body: jsonEncode(body),
+    );
+    return _safeDecrypt(res);
+  }
+}
