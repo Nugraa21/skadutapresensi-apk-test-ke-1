@@ -23,7 +23,7 @@ Aplikasi presensi digital sekolah berbasis Flutter untuk siswa, guru, dan admin.
 ## Instalasi
 1. Clone repository:
    ```bash
-   git clone https://github.com/username/skaduta-presensi-flutter.git
+   git clone https://github.com/Nugraa21/skadutapresensi-apk-test-ke-1.git
    ```
 2. Masuk folder:
    ```bash
