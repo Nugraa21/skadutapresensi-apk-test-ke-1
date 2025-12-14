@@ -1,6 +1,7 @@
 // pages/dashboard_page.dart (UPDATED: Added Rekap menu for admin/superadmin; simplified UI, larger buttons/text for older users; enhanced with gradient bg, better padding, rounded cards, consistent styling)
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
+import '../api/api_service.dart';
 
 class DashboardPage extends StatelessWidget {
   final UserModel user;
@@ -39,7 +40,7 @@ class DashboardPage extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.logout_rounded, size: 28),
             onPressed: () async {
-              // await ApiService.logout();
+              await ApiService.logout();
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 '/login',

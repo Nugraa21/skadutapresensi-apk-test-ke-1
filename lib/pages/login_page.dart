@@ -104,7 +104,7 @@ class _LoginPageState extends State<LoginPage> {
                               TextFormField(
                                 controller: _inputC,
                                 decoration: InputDecoration(
-                                  labelText: 'Username / NIP / NISN',
+                                  labelText: 'Username / NIP / NIK',
                                   prefixIcon: const Icon(Icons.person_outline),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -179,7 +179,7 @@ class _LoginPageState extends State<LoginPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Text(
-                        '• Login bisa pakai Username / NIP / NISN\n• Pastikan koneksi internet stabil',
+                        '• Login bisa pakai Username / NIP / NIK\n• Pastikan koneksi internet stabil',
                         style: TextStyle(color: Colors.white, fontSize: 16),
                       ),
                     ),

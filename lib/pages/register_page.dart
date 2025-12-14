@@ -231,7 +231,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 ),
                               ),
                               subtitle: const Text(
-                                'NIP/NISN tidak wajib diisi',
+                                'NIP/NIK tidak wajib diisi',
                                 style: TextStyle(fontSize: 15),
                               ),
                               controlAffinity: ListTileControlAffinity.leading,
@@ -240,13 +240,13 @@ class _RegisterPageState extends State<RegisterPage> {
                           ),
                           const SizedBox(height: 20),
 
-                          // NIP/NISN (hanya muncul jika bukan karyawan)
+                          // NIP/NIK (hanya muncul jika bukan karyawan)
                           if (!_isKaryawan)
                             TextFormField(
                               controller: _nipNisnC,
                               keyboardType: TextInputType.number,
                               decoration: _inputDecoration(
-                                'NIP / NISN',
+                                'NIP / NUK',
                                 Icons.credit_card_outlined,
                                 cs,
                               ),
@@ -254,7 +254,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               validator: (_) => _isKaryawan
                                   ? null
                                   : (_nipNisnC.text.trim().isEmpty
-                                        ? 'NIP/NISN wajib diisi'
+                                        ? 'NIP/NIK wajib diisi'
                                         : null),
                             ),
                           if (!_isKaryawan) const SizedBox(height: 20),
@@ -319,7 +319,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 items: const [
                                   DropdownMenuItem(
                                     value: 'user',
-                                    child: Text('User (Siswa / Guru)'),
+                                    child: Text('User (Karyawan / Guru)'),
                                   ),
                                   DropdownMenuItem(
                                     value: 'admin',

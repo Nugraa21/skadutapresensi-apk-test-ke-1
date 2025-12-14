@@ -289,7 +289,7 @@ class _AdminUserListPageState extends State<AdminUserListPage> {
                                                 ),
                                                 if (nip.isNotEmpty)
                                                   Text(
-                                                    'NIP/NISN: $nip',
+                                                    'NIP/NIK: $nip',
                                                     style: TextStyle(
                                                       color: Colors.grey[600],
                                                     ),
