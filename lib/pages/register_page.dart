@@ -246,7 +246,7 @@ class _RegisterPageState extends State<RegisterPage> {
                               controller: _nipNisnC,
                               keyboardType: TextInputType.number,
                               decoration: _inputDecoration(
-                                'NIP / NUK',
+                                'NIP / NIK',
                                 Icons.credit_card_outlined,
                                 cs,
                               ),
