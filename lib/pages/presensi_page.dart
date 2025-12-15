@@ -44,7 +44,7 @@ class _PresensiPageState extends State<PresensiPage>
 
   static const double sekolahLat = -7.7771639173358516;
   static const double sekolahLng = 110.36716347232226;
-  static const double maxRadius = 200;
+  static const double maxRadius = 110;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
