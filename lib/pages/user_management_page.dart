@@ -148,7 +148,11 @@ class _UserManagementPageState extends State<UserManagementPage> {
   Future<void> _editUser(Map<String, dynamic> user) async {
     final usernameC = TextEditingController(text: user['username']);
     final namaC = TextEditingController(text: user['nama_lengkap'] ?? '');
+    final nipC = TextEditingController(text: user['nip_nisn'] ?? '');
     final passC = TextEditingController();
+
+    String? selectedRole = user['role']?.toString().toLowerCase();
+    String deviceInfo = user['device_id'] == null ? 'Tidak terikat' : 'Terikat';
 
     final saved = await showModalBottomSheet<bool>(
       context: context,
@@ -165,6 +169,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Header
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -175,15 +180,11 @@ class _UserManagementPageState extends State<UserManagementPage> {
                   ),
                 ),
                 child: Row(
-                  children: [
-                    const Icon(
-                      Icons.edit_rounded,
-                      color: Colors.white,
-                      size: 28,
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'Edit User',
+                  children: const [
+                    Icon(Icons.edit_rounded, color: Colors.white, size: 28),
+                    SizedBox(width: 12),
+                    Text(
+                      'Edit User Lengkap',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -194,40 +195,90 @@ class _UserManagementPageState extends State<UserManagementPage> {
                 ),
               ),
               const SizedBox(height: 20),
+
+              // Username
               TextField(
                 controller: usernameC,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Username',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  prefixIcon: const Icon(Icons.person_rounded),
+                  prefixIcon: Icon(Icons.person),
                 ),
               ),
               const SizedBox(height: 16),
+
+              // Nama Lengkap
               TextField(
                 controller: namaC,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Nama Lengkap',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  prefixIcon: const Icon(Icons.account_circle_rounded),
+                  prefixIcon: Icon(Icons.account_circle),
                 ),
               ),
               const SizedBox(height: 16),
+
+              // NIP/NISN
+              TextField(
+                controller: nipC,
+                decoration: const InputDecoration(
+                  labelText: 'NIP/NISN (opsional)',
+                  prefixIcon: Icon(Icons.badge),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Role
+              DropdownButtonFormField<String>(
+                value: selectedRole,
+                decoration: const InputDecoration(
+                  labelText: 'Role',
+                  prefixIcon: Icon(Icons.shield),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'user', child: Text('User')),
+                  DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                  DropdownMenuItem(
+                    value: 'superadmin',
+                    child: Text('Super Admin'),
+                  ),
+                ],
+                onChanged: (val) => selectedRole = val,
+              ),
+              const SizedBox(height: 16),
+
+              // Password
               TextField(
                 controller: passC,
                 obscureText: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Password Baru (kosongkan jika tidak ganti)',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                  prefixIcon: Icon(Icons.lock),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Device ID Info + Reset
+              ListTile(
+                leading: Icon(
+                  Icons.phone_android,
+                  color: deviceInfo == 'Terikat' ? Colors.green : Colors.grey,
+                ),
+                title: Text('Device Binding'),
+                subtitle: Text(deviceInfo),
+                trailing: TextButton(
+                  child: const Text(
+                    'Reset Binding',
+                    style: TextStyle(color: Colors.red),
                   ),
-                  prefixIcon: const Icon(Icons.lock_rounded),
+                  onPressed: () {
+                    deviceInfo = 'Tidak terikat';
+                    Navigator.pop(ctx);
+                    _editUser(user); // refresh modal
+                  },
                 ),
               ),
               const SizedBox(height: 24),
+
+              // Tombol
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -242,17 +293,30 @@ class _UserManagementPageState extends State<UserManagementPage> {
                           id: user['id'].toString(),
                           username: usernameC.text.trim(),
                           namaLengkap: namaC.text.trim(),
+                          nipNisn: nipC.text.trim(),
+                          role: selectedRole ?? 'user',
                           password: passC.text.isEmpty
                               ? null
                               : passC.text.trim(),
+                          deviceId: deviceInfo == 'Tidak terikat'
+                              ? ''
+                              : null, // kirim '' untuk reset
                         );
-                        Navigator.pop(ctx, res['status'] == 'success');
+
                         if (res['status'] == 'success') {
+                          Navigator.pop(ctx, true);
                           _loadUsers();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('User diperbarui'),
-                              backgroundColor: Color(0xFF4CAF50),
+                              content: Text('User berhasil diperbarui'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(res['message'] ?? 'Gagal update'),
+                              backgroundColor: Colors.red,
                             ),
                           );
                         }
@@ -260,7 +324,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('Error: $e'),
-                            backgroundColor: Colors.red[600],
+                            backgroundColor: Colors.red,
                           ),
                         );
                       }
