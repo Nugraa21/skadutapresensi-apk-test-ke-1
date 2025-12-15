@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:io' show Platform;
 import '../utils/encryption.dart';
 
 class ApiService {
@@ -10,6 +12,24 @@ class ApiService {
 
   // API Key harus sama persis dengan yang di config.php
   static const String _apiKey = 'Skaduta2025!@#SecureAPIKey1234567890';
+
+  /// Get device ID for binding
+  static Future<String> getDeviceId() async {
+    try {
+      final deviceInfo = DeviceInfoPlugin();
+      if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        return androidInfo.id; // Unique device ID for Android
+      } else if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        return iosInfo.identifierForVendor ?? ''; // Unique for iOS app installs
+      }
+      return ''; // Fallback
+    } catch (e) {
+      print('Error getting device ID: $e');
+      return '';
+    }
+  }
 
   /// Header umum untuk semua request
   static Future<Map<String, String>> _getHeaders({
@@ -96,11 +116,20 @@ class ApiService {
     required String input,
     required String password,
   }) async {
+    final deviceId = await getDeviceId();
+    if (deviceId.isEmpty) {
+      return {"status": false, "message": "Gagal mendapatkan ID perangkat"};
+    }
+
     final headers = await _getHeaders(withToken: false);
     final res = await http.post(
       Uri.parse("$baseUrl/login.php"),
       headers: headers,
-      body: jsonEncode({"username": input, "password": password}),
+      body: jsonEncode({
+        "username": input,
+        "password": password,
+        "device_id": deviceId,
+      }),
     );
 
     final result = _safeDecrypt(res);
@@ -112,6 +141,10 @@ class ApiService {
       await prefs.setString('user_id', result['user']['id'].toString());
       await prefs.setString('user_name', result['user']['nama_lengkap']);
       await prefs.setString('user_role', result['user']['role']);
+      await prefs.setString(
+        'device_id',
+        deviceId,
+      ); // Optional: store for future checks
     }
     return result;
   }
@@ -149,6 +182,11 @@ class ApiService {
     required String role,
     required bool isKaryawan,
   }) async {
+    final deviceId = await getDeviceId();
+    if (deviceId.isEmpty) {
+      return {"status": "error", "message": "Gagal mendapatkan ID perangkat"};
+    }
+
     final headers = await _getHeaders(withToken: false);
     final res = await http.post(
       Uri.parse("$baseUrl/register.php"),
@@ -160,6 +198,7 @@ class ApiService {
         "password": password,
         "role": role,
         "is_karyawan": isKaryawan,
+        "device_id": deviceId,
       }),
     );
     return _safeDecrypt(res);

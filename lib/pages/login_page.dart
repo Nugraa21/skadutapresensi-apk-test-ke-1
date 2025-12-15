@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:device_info_plus/device_info_plus.dart';
+import 'dart:io' show Platform;
 import '../api/api_service.dart';
 import '../models/user_model.dart';
 

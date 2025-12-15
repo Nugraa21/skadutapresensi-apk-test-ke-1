@@ -34,7 +34,7 @@ dependencies:
   # ========================================================  
 
   # Sementara di-comment dulu ya dependency lama-nya biar gak bingung 
-
+  device_info_plus: ^10.1.0
 
   # ================ dependency lama =======================
   # shared_preferences: ^2.3.2   # For storing user data/device ID locally
