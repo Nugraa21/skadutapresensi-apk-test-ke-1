@@ -266,17 +266,15 @@ class ApiService {
     String? nipNisn,
     String? role,
     String? password,
-    String? deviceId, // baru
   }) async {
     final headers = await _getHeaders();
     final body = {
       "id": id,
       "username": username,
       "nama_lengkap": namaLengkap,
-      if (nipNisn != null) "nip_nisn": nipNisn,
+      if (nipNisn != null && nipNisn.isNotEmpty) "nip_nisn": nipNisn,
       if (role != null) "role": role,
       if (password != null && password.isNotEmpty) "password": password,
-      if (deviceId != null) "device_id": deviceId, // kirim "" untuk reset
     };
 
     final res = await http.post(
