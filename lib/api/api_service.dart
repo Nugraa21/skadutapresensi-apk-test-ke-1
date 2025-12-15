@@ -13,9 +13,12 @@ class ApiService {
   // API Key harus sama persis dengan yang di config.php
   static const String _apiKey = 'Skaduta2025!@#SecureAPIKey1234567890';
 
-  /// Get device ID for binding
+  /// Get device ID for binding (skip for Windows desktop)
   static Future<String> getDeviceId() async {
     try {
+      if (Platform.isWindows) {
+        return ''; // Skip device ID for Windows desktop
+      }
       final deviceInfo = DeviceInfoPlugin();
       if (Platform.isAndroid) {
         final androidInfo = await deviceInfo.androidInfo;
@@ -117,9 +120,6 @@ class ApiService {
     required String password,
   }) async {
     final deviceId = await getDeviceId();
-    if (deviceId.isEmpty) {
-      return {"status": false, "message": "Gagal mendapatkan ID perangkat"};
-    }
 
     final headers = await _getHeaders(withToken: false);
     final res = await http.post(
@@ -183,9 +183,6 @@ class ApiService {
     required bool isKaryawan,
   }) async {
     final deviceId = await getDeviceId();
-    if (deviceId.isEmpty) {
-      return {"status": "error", "message": "Gagal mendapatkan ID perangkat"};
-    }
 
     final headers = await _getHeaders(withToken: false);
     final res = await http.post(
