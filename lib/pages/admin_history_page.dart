@@ -198,7 +198,7 @@ class _AdminHistoryPageState extends State<AdminHistoryPage> {
                                 final formattedDate = DateFormat(
                                   'dd MMM yyyy HH:mm',
                                 ).format(created);
-                                final status = h['status'] ?? 'Pending';
+                                final status = h['status'] ?? 'Waiting';
                                 final statusColor = status == 'Disetujui'
                                     ? Colors.green
                                     : status == 'Ditolak'

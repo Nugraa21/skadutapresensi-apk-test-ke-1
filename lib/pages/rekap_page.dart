@@ -1,19 +1,3 @@
-// pages/rekap_page.dart
-// REKAP + EXPORT EXCEL (DIEDIT UNTUK UI/UX LEBIH SIMPEL, BAGUS, DAN MUDAH DIBACA)
-// Perubahan utama:
-// - Layout lebih clean dengan spacing konsisten dan cards rounded subtle.
-// - Typography: Font sizes lebih hierarkis, bold hanya di tempat penting.
-// - Animasi lebih smooth: Staggered fade-in untuk items.
-// - Pivot table: Dibuat lebih compact, dengan icons kecil alih-alih text panjang.
-// - Warna scheme: Lebih soft, gunakan primary color dari theme.
-// - Responsif: Tambah MediaQuery untuk adjust padding di device kecil.
-// - Simpel: Hilangkan elemen berlebih, fokus pada readability (e.g., subtitle lebih ringkas).
-// - FIX: Alias import excel untuk resolve TextSpan conflict.
-// - FIX: Swap params di _infoCard untuk Total Absen (value big, title small).
-// - ENHANCE: Export Excel sekarang punya 2 sheets: 'Rekap Lengkap' (data full) & 'Ringkasan Harian' (pivot table).
-//   - Per User details tercakup di sheet utama (sudah ada Nama, Tanggal, Jenis, Status, Keterangan per entry).
-//   - Pivot: Nama | Tanggal1 | Tanggal2 | ... dengan Jenis atau '-'.
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:excel/excel.dart' as xls;
@@ -32,31 +16,50 @@ class RekapPage extends StatefulWidget {
 class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
   bool _loading = false;
   List<dynamic> _data = [];
-  String _month = DateTime.now().month.toString().padLeft(2, '0');
-  String _year = DateTime.now().year.toString();
+  int _selectedMonth = DateTime.now().month;
+  int _selectedYear = DateTime.now().year;
 
-  Map<String, List<Map<String, dynamic>>> _perUser = {};
   Map<String, Map<String, String>> _pivot = {};
-  List<String> _dates = [];
+  List<String> _allDates = [];
 
   late AnimationController _animController;
   late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
+
+  final Map<int, String> _indonesianMonths = {
+    1: 'Januari',
+    2: 'Februari',
+    3: 'Maret',
+    4: 'April',
+    5: 'Mei',
+    6: 'Juni',
+    7: 'Juli',
+    8: 'Agustus',
+    9: 'September',
+    10: 'Oktober',
+    11: 'November',
+    12: 'Desember',
+  };
+
+  final Map<String, String> _dayNames = {
+    'Mon': 'Sen',
+    'Tue': 'Sel',
+    'Wed': 'Rab',
+    'Thu': 'Kam',
+    'Fri': 'Jum',
+    'Sat': 'Sab',
+    'Sun': 'Min',
+  };
 
   @override
   void initState() {
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 800),
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
     );
-    _slideAnimation =
-        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
-          CurvedAnimation(parent: _animController, curve: Curves.easeOutBack),
-        );
     _loadRekap();
   }
 
@@ -69,26 +72,30 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
   Future<void> _loadRekap() async {
     setState(() => _loading = true);
     try {
-      final data = await ApiService.getRekap(month: _month, year: _year);
+      final data = await ApiService.getRekap(
+        month: _selectedMonth.toString().padLeft(2, '0'),
+        year: _selectedYear.toString(),
+      );
       setState(() => _data = data);
-      _processData();
+      _processPivot();
       _animController.forward(from: 0);
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Gagal load data: $e'),
-          backgroundColor: Colors.red.shade600,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal load data: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       setState(() => _loading = false);
     }
   }
 
-  void _processData() {
-    _perUser.clear();
+  void _processPivot() {
     _pivot.clear();
-    _dates.clear();
+    _generateAllDates();
 
     for (var item in _data) {
       final nama = item['nama_lengkap'] ?? 'Tanpa Nama';
@@ -96,181 +103,370 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
       final tgl = rawDate.length >= 10 ? rawDate.substring(0, 10) : '';
       final jenis = item['jenis'] ?? '-';
       final status = item['status'] ?? 'Pending';
-      final ket = item['keterangan'] ?? '-';
 
-      _perUser.putIfAbsent(nama, () => []);
-      _perUser[nama]!.add({
-        'tgl': tgl,
-        'jenis': jenis,
-        'status': status,
-        'ket': ket,
-      });
+      final shortJenis = _getShortJenis(jenis, status);
 
       _pivot.putIfAbsent(nama, () => {});
-      _pivot[nama]![tgl] = jenis;
-
-      if (tgl.isNotEmpty && !_dates.contains(tgl)) _dates.add(tgl);
+      if (tgl.isNotEmpty && _allDates.contains(tgl)) {
+        if (_pivot[nama]![tgl] == null ||
+            ['PF', 'I', 'R', 'PN'].indexOf(shortJenis) <
+                ['PF', 'I', 'R', 'PN'].indexOf(_pivot[nama]![tgl]!)) {
+          _pivot[nama]![tgl] = shortJenis;
+        }
+      }
     }
-    _dates.sort();
   }
 
-  // EXPORT TO EXCEL – SUDAH SESUAI excel ^4.0.6+
+  String _getShortJenis(String jenis, String status) {
+    if (status != 'Disetujui') {
+      return 'NA'; // Tidak disetujui
+    }
+
+    switch (jenis) {
+      case 'Masuk':
+      case 'Pulang':
+        return 'R'; // Regular (hijau)
+      case 'Penugasan_Masuk':
+      case 'Penugasan_Pulang':
+        return 'PN'; // Penugasan Normal (oren)
+      case 'Penugasan_Full':
+        return 'PF'; // Penugasan Full (kuning)
+      case 'Izin':
+        return 'I'; // Izin (biru)
+      case 'Pulang Cepat':
+        return 'PC'; // Pulang Cepat (amber, if needed)
+      default:
+        return '-';
+    }
+  }
+
+  void _generateAllDates() {
+    _allDates.clear();
+    final daysInMonth = DateUtils.getDaysInMonth(_selectedYear, _selectedMonth);
+    for (int day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(_selectedYear, _selectedMonth, day);
+      _allDates.add(DateFormat('yyyy-MM-dd').format(date));
+    }
+  }
+
+  bool _isWeekend(String dateStr) {
+    final date = DateTime.parse(dateStr);
+    return date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
+  }
+
+  bool _isFuture(String dateStr) {
+    final date = DateTime.parse(dateStr);
+    return date.isAfter(DateTime.now());
+  }
+
+  String _getIndonesianMonth(int month) {
+    return _indonesianMonths[month] ?? month.toString();
+  }
+
+  String _getIndonesianDayAbbrev(DateTime date) {
+    final englishAbbrev = DateFormat('EEE', 'en_US').format(date);
+    return _dayNames[englishAbbrev] ?? englishAbbrev;
+  }
+
+  Color _getFlutterColor(String code) {
+    switch (code) {
+      case 'R':
+        return Colors.green; // Hijau for regular
+      case 'PN':
+        return Colors.orange; // Oren for penugasan normal
+      case 'PF':
+        return Colors.amber; // Kuning for penugasan full
+      case 'I':
+        return Colors.blue; // Biru for izin
+      case 'NA':
+        return Colors.red[700]!; // Abu merah for not approved
+      case 'PC':
+        return Colors.amber;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getBgColorHex(String code) {
+    switch (code) {
+      case 'R':
+        return 'FF4CAF50'; // Hijau
+      case 'PN':
+        return 'FFFF9800'; // Oren
+      case 'PF':
+        return 'FFFFB74D'; // Kuning
+      case 'I':
+        return 'FF2196F3'; // Biru
+      case 'NA':
+        return 'FFD32F2F'; // Abu merah
+      case 'PC':
+        return 'FFFFB74D';
+      default:
+        return 'FFE6E6E6'; // Abu-abu muda
+    }
+  }
+
+  xls.ExcelColor _getExcelBgColor(String code) {
+    final hex = _getBgColorHex(code);
+    return xls.ExcelColor.fromHexString('#$hex');
+  }
+
+  xls.ExcelColor _getExcelFontColor() {
+    return xls.ExcelColor.fromHexString('#FFFFFF');
+  }
+
+  xls.ExcelColor _getExcelGrayColor(String hexFull) {
+    return xls.ExcelColor.fromHexString('#$hexFull');
+  }
+
   Future<void> _exportToExcel() async {
     if (_data.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Data kosong!'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Data kosong!')));
+      }
       return;
     }
 
-    // Izin penyimpanan
+    Directory? dir;
     if (Platform.isAndroid) {
       var status = await Permission.manageExternalStorage.request();
       if (!status.isGranted) status = await Permission.storage.request();
       if (!status.isGranted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Izin penyimpanan ditolak!')),
-        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Izin penyimpanan ditolak')),
+          );
+        }
         return;
       }
+      dir = Directory('/storage/emulated/0/Download');
+      if (!await dir.exists()) await dir.create(recursive: true);
+    } else if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      dir = await getApplicationDocumentsDirectory();
+    } else {
+      dir = await getTemporaryDirectory();
     }
+
+    final fileName =
+        'Rekap_Absensi_${_getIndonesianMonth(_selectedMonth)} $_selectedYear.xlsx';
+    final path = '${dir.path}/$fileName';
 
     var excel = xls.Excel.createExcel();
-    xls.Sheet mainSheet = excel['Rekap Lengkap'];
+    excel.delete('Sheet1');
+    xls.Sheet lengkapSheet = excel['Rekap Lengkap'];
+    xls.Sheet harianSheet = excel['Rekap Harian'];
 
-    // Header untuk Rekap Lengkap
-    mainSheet.appendRow([
-      xls.TextCellValue("No"),
-      xls.TextCellValue("Nama"),
-      xls.TextCellValue("Tanggal"),
-      xls.TextCellValue("Jenis"),
-      xls.TextCellValue("Status"),
-      xls.TextCellValue("Keterangan"),
+    // Sheet Rekap Lengkap (detail)
+    lengkapSheet.appendRow([
+      xls.TextCellValue('No'),
+      xls.TextCellValue('Nama'),
+      xls.TextCellValue('Tanggal'),
+      xls.TextCellValue('Jenis'),
+      xls.TextCellValue('Status'),
+      xls.TextCellValue('Keterangan'),
     ]);
 
-    // Styling Header
-    xls.CellStyle headerStyle = xls.CellStyle(
-      bold: true,
-      // backgroundColorHex: "#1565C0",
-      // fontColorHex: "#FFFFFF",
-      horizontalAlign: xls.HorizontalAlign.Center,
-      verticalAlign: xls.VerticalAlign.Center,
-    );
-
-    for (var i = 0; i < 6; i++) {
-      var cell = mainSheet.cell(
-        xls.CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0),
-      );
-      cell.cellStyle = headerStyle;
-    }
-
-    // Isi data Rekap Lengkap
     int no = 1;
     for (var item in _data) {
-      final nama = item['nama_lengkap'] ?? 'Unknown';
-      final tgl = item['created_at']?.toString().substring(0, 10) ?? '-';
       final jenis = item['jenis'] ?? '-';
       final status = item['status'] ?? 'Pending';
-      final ket = item['keterangan'] ?? '-';
-
-      mainSheet.appendRow([
+      final keterangan = status != 'Disetujui'
+          ? 'Tidak Disetujui'
+          : (item['keterangan'] ?? '-');
+      lengkapSheet.appendRow([
         xls.TextCellValue(no.toString()),
-        xls.TextCellValue(nama),
-        xls.TextCellValue(tgl),
+        xls.TextCellValue(item['nama_lengkap'] ?? '-'),
+        xls.TextCellValue(item['created_at']?.substring(0, 10) ?? '-'),
         xls.TextCellValue(jenis),
         xls.TextCellValue(status),
-        xls.TextCellValue(ket),
+        xls.TextCellValue(keterangan),
       ]);
       no++;
     }
 
-    // Sheet Ringkasan Harian (Pivot)
-    if (_dates.isNotEmpty && _pivot.isNotEmpty) {
-      xls.Sheet pivotSheet = excel['Ringkasan Harian'];
+    // Sheet Rekap Harian
+    List<xls.CellValue> header = [xls.TextCellValue('Nama')];
+    for (var d in _allDates) {
+      header.add(xls.TextCellValue(d.substring(8, 10)));
+    }
+    harianSheet.appendRow(header);
 
-      // Header Pivot: Nama + dates
-      List<xls.CellValue?> pivotHeader = [xls.TextCellValue("Nama")];
-      for (var d in _dates) {
-        pivotHeader.add(xls.TextCellValue(d)); // Full date YYYY-MM-DD
-      }
-      pivotSheet.appendRow(pivotHeader);
-
-      // Style header pivot
-      int pivotColCount = 1 + _dates.length;
-      for (var i = 0; i < pivotColCount; i++) {
-        var cell = pivotSheet.cell(
-          xls.CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0),
-        );
-        cell.cellStyle = headerStyle;
-      }
-
-      // Isi data Pivot (sorted names)
-      List<String> sortedNames = _pivot.keys.toList()..sort();
-      for (var nama in sortedNames) {
-        List<xls.CellValue?> pivotRow = [xls.TextCellValue(nama)];
-        for (var d in _dates) {
-          final val = _pivot[nama]![d] ?? '-';
-          pivotRow.add(xls.TextCellValue(val));
-        }
-        pivotSheet.appendRow(pivotRow);
-      }
+    // Styling header
+    for (int i = 0; i < header.length; i++) {
+      final cell = harianSheet.cell(
+        xls.CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0),
+      );
+      cell.cellStyle = xls.CellStyle(
+        bold: true,
+        backgroundColorHex: _getExcelGrayColor('FFE6E6E6'),
+        horizontalAlign: xls.HorizontalAlign.Center,
+      );
     }
 
-    // Simpan ke folder Downloads
-    final directory = Directory('/storage/emulated/0/Download');
-    if (!await directory.exists()) await directory.create(recursive: true);
+    List<String> names = _pivot.keys.toList()..sort();
+    int rowIndex = 1;
+    for (var nama in names) {
+      List<xls.CellValue> row = [xls.TextCellValue(nama)];
+      List<String> values = [];
+      for (var d in _allDates) {
+        String value;
+        if (_isWeekend(d)) {
+          value = 'Libur';
+        } else if (_isFuture(d)) {
+          value = '';
+        } else {
+          value = _pivot[nama]![d] ?? '-';
+        }
+        row.add(xls.TextCellValue(value));
+        values.add(value);
+      }
+      harianSheet.appendRow(row);
 
-    final fileName = "Rekap_Absensi_$_month-$_year.xlsx";
-    final path = "${directory.path}/$fileName";
+      // Styling data cells (columns 1+)
+      for (int i = 0; i < values.length; i++) {
+        final value = values[i];
+        final cell = harianSheet.cell(
+          xls.CellIndex.indexByColumnRow(
+            columnIndex: i + 1,
+            rowIndex: rowIndex,
+          ),
+        );
+        if (value == 'Libur') {
+          cell.cellStyle = xls.CellStyle(
+            backgroundColorHex: _getExcelGrayColor('FFD9D9D9'),
+          );
+        } else if (value != '' && value != '-') {
+          cell.cellStyle = xls.CellStyle(
+            backgroundColorHex: _getExcelBgColor(value),
+            fontColorHex: _getExcelFontColor(),
+            bold: true,
+            horizontalAlign: xls.HorizontalAlign.Center,
+          );
+        }
+      }
+      rowIndex++;
+    }
 
-    final fileBytes = excel.encode()!;
-    await File(path).writeAsBytes(fileBytes);
+    await File(path).writeAsBytes(excel.encode()!);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          "Berhasil disimpan di folder Downloads! (2 sheets: Lengkap & Harian)",
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Berhasil diexport: $fileName'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+            label: 'BUKA',
+            textColor: Colors.white,
+            onPressed: () => OpenFile.open(path),
+          ),
         ),
-        backgroundColor: Colors.green.shade600,
-        duration: const Duration(seconds: 6),
-        action: SnackBarAction(
-          label: "BUKA",
-          textColor: Colors.yellow,
-          onPressed: () => OpenFile.open(path),
-        ),
-      ),
+      );
+    }
+  }
+
+  void _showMonthPicker() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(_selectedYear, _selectedMonth),
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now(),
+      builder: (context, child) =>
+          Theme(data: Theme.of(context), child: child!),
     );
+    if (picked != null &&
+        (picked.month != _selectedMonth || picked.year != _selectedYear)) {
+      setState(() {
+        _selectedMonth = picked.month;
+        _selectedYear = picked.year;
+      });
+      _loadRekap();
+    }
+  }
+
+  Widget _buildLegend() {
+    return Wrap(
+      spacing: 16,
+      runSpacing: 8,
+      children: [
+        _legendItem('R', 'Masuk/Pulang Biasa', Colors.green),
+        _legendItem('PN', 'Penugasan Masuk/Pulang', Colors.orange),
+        _legendItem('PF', 'Penugasan Full', Colors.amber),
+        _legendItem('I', 'Izin', Colors.blue),
+        _legendItem('NA', 'Tidak Disetujui', Colors.red[700]!),
+        _legendItem('-', 'Tidak Hadir', Colors.grey[400]!),
+        _legendItem('Libur', 'Weekend', Colors.grey[300]!),
+      ],
+    );
+  }
+
+  Widget _legendItem(String code, String label, Color color) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 20,
+          height: 20,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text('$code - $label', style: const TextStyle(fontSize: 14)),
+        ),
+      ],
+    );
+  }
+
+  int _getStats(String code) {
+    int count = 0;
+    for (var nama in _pivot.keys) {
+      for (var d in _allDates) {
+        if (!_isWeekend(d) && !_isFuture(d) && _pivot[nama]![d] == code) {
+          count++;
+        }
+      }
+    }
+    return count;
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final screenWidth = MediaQuery.of(context).size.width;
+    final totalTeachers = _pivot.keys.length;
+    final totalDays = _allDates.length;
+    final presentDays =
+        _getStats('R') + _getStats('PN') + _getStats('PF') + _getStats('I');
+    final absentDays =
+        totalTeachers * (totalDays - _allDates.where(_isWeekend).length) -
+        presentDays;
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
-          "Rekap Absensi",
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          'Rekap Absensi Guru',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, size: 28),
-            onPressed: _loadRekap,
+            onPressed: _showMonthPicker,
+            icon: const Icon(Icons.calendar_month_rounded),
           ),
           IconButton(
-            icon: const Icon(Icons.download_rounded, size: 28),
-            onPressed: _exportToExcel,
-            tooltip: "Export ke Excel",
+            onPressed: _loadRekap,
+            icon: const Icon(Icons.refresh_rounded),
           ),
-          SizedBox(width: screenWidth > 600 ? 16 : 8),
+          IconButton(
+            onPressed: _exportToExcel,
+            icon: const Icon(Icons.download_rounded),
+            tooltip: 'Export Excel',
+          ),
+          const SizedBox(width: 8),
         ],
         flexibleSpace: Container(
           decoration: BoxDecoration(
@@ -294,405 +490,420 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
           ),
         ),
         child: _loading
-            ? const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 4,
-                  color: Colors.blue,
-                ),
-              )
+            ? const Center(child: CircularProgressIndicator())
             : _data.isEmpty
             ? Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
-                      Icons.event_busy,
-                      size: 64,
-                      color: Colors.grey.shade300,
-                    ),
-                    const SizedBox(height: 12),
+                    Icon(Icons.event_busy, size: 80, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
                     Text(
-                      "Belum ada data absensi",
-                      style: TextStyle(
-                        fontSize: 18,
-                        color: Colors.grey.shade500,
-                        fontWeight: FontWeight.w500,
-                      ),
+                      'Tidak ada data untuk periode ini',
+                      style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                     ),
                   ],
                 ),
               )
-            : CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        16,
-                        MediaQuery.of(context).padding.top + 80,
-                        16,
-                        16,
-                      ),
-                      child: Column(
+            : FadeTransition(
+                opacity: _fadeAnimation,
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    MediaQuery.of(context).padding.top + 80,
+                    16,
+                    32,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Stats Dashboard Cards
+                      Row(
                         children: [
-                          // Info Cards – Lebih compact
-                          FadeTransition(
-                            opacity: _fadeAnimation,
-                            child: SlideTransition(
-                              position: _slideAnimation,
-                              child: _buildInfoCards(cs),
+                          Expanded(
+                            child: Card(
+                              elevation: 6,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.people,
+                                      size: 32,
+                                      color: cs.primary,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '$totalTeachers',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: cs.primary,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Guru',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 24),
-                          // Per User Section
-                          _buildSectionHeader("Detail Per User", Icons.people),
-                          const SizedBox(height: 12),
-                          FadeTransition(
-                            opacity: _fadeAnimation,
-                            child: SlideTransition(
-                              position: _slideAnimation,
-                              child: _buildPerUserList(),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Card(
+                              elevation: 6,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.calendar_today,
+                                      size: 32,
+                                      color: cs.primary,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '$totalDays',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: cs.primary,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Hari',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 32),
-                          // Pivot Table Section
-                          _buildSectionHeader(
-                            "Ringkasan Harian",
-                            Icons.calendar_view_day,
-                          ),
-                          const SizedBox(height: 12),
-                          FadeTransition(
-                            opacity: _fadeAnimation,
-                            child: SlideTransition(
-                              position: _slideAnimation,
-                              child: _buildPivotTable(cs),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Card(
+                              elevation: 6,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      size: 32,
+                                      color: Colors.green,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '$presentDays',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.green,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Hadir',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 32),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Card(
+                              elevation: 6,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.close,
+                                      size: 32,
+                                      color: Colors.red,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      '$absentDays',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Absen',
+                                      style: TextStyle(color: Colors.grey[600]),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                  ),
-                ],
-              ),
-      ),
-    );
-  }
-
-  Widget _buildInfoCards(ColorScheme cs) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: LinearGradient(
-            colors: [cs.primary.withOpacity(0.1), cs.primary.withOpacity(0.05)],
-          ),
-        ),
-        child: Row(
-          children: [
-            Expanded(
-              child: _infoCard(
-                _data.length.toString(),
-                "Total Absen",
-                Icons.bar_chart_rounded,
-                cs.primary,
-              ),
-            ),
-            const SizedBox(width: 24),
-            Expanded(
-              child: _infoCard(
-                DateFormat(
-                  'MMM yyyy',
-                ).format(DateTime(int.parse(_year), int.parse(_month))),
-                "Periode",
-                Icons.calendar_today_rounded,
-                cs.secondary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _infoCard(String value, String title, IconData icon, Color color) {
-    return Column(
-      children: [
-        Icon(icon, size: 32, color: color),
-        const SizedBox(height: 8),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        Text(
-          title,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-          textAlign: TextAlign.center,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionHeader(String title, IconData icon) {
-    return Row(
-      children: [
-        Icon(icon, size: 24, color: Theme.of(context).colorScheme.primary),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildPerUserList() {
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _perUser.length,
-      separatorBuilder: (ctx, i) => const SizedBox(height: 8),
-      itemBuilder: (ctx, i) {
-        final nama = _perUser.keys.elementAt(i);
-        final items = _perUser[nama]!;
-        return Card(
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: ExpansionTile(
-            leading: CircleAvatar(
-              radius: 20,
-              backgroundColor: Theme.of(
-                context,
-              ).colorScheme.primary.withOpacity(0.1),
-              child: Text(
-                nama.isNotEmpty ? nama[0].toUpperCase() : '?',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            title: Text(
-              nama,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-            ),
-            subtitle: Text(
-              "${items.length} entri",
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
-            ),
-            childrenPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-            children: items.map((e) => _buildUserItem(e)).toList(),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildUserItem(Map<String, dynamic> e) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _jenisIcon(e['jenis']),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                RichText(
-                  text: TextSpan(
-                    style: const TextStyle(fontSize: 14, color: Colors.black87),
-                    children: [
-                      TextSpan(text: e['tgl']),
-                      const TextSpan(
-                        text: ' • ',
-                        style: TextStyle(fontSize: 14),
-                      ),
-                      TextSpan(
-                        text: e['jenis'],
-                        style: TextStyle(fontWeight: FontWeight.w500),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  e['ket'].isNotEmpty ? e['ket'] : 'Status: ${e['status']}',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
-          ),
-          _statusBadge(e['status']),
-        ],
-      ),
-    );
-  }
-
-  Widget _jenisIcon(String jenis) {
-    IconData icon = Icons.help_outline_rounded;
-    Color color = Colors.grey;
-    if (jenis == 'Masuk') {
-      icon = Icons.login_rounded;
-      color = Colors.green;
-    } else if (jenis == 'Pulang') {
-      icon = Icons.logout_rounded;
-      color = Colors.orange;
-    } else if (jenis.contains('Izin')) {
-      icon = Icons.sick_rounded;
-      color = Colors.red;
-    } else if (jenis.contains('Penugasan')) {
-      icon = Icons.assignment_rounded;
-      color = Colors.purple;
-    }
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        shape: BoxShape.circle,
-      ),
-      child: Icon(icon, size: 20, color: color),
-    );
-  }
-
-  Widget _statusBadge(String status) {
-    Color color = Colors.grey;
-    if (status == 'Disetujui')
-      color = Colors.green;
-    else if (status == 'Pending')
-      color = Colors.orange;
-    else
-      color = Colors.red;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Text(
-        status,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPivotTable(ColorScheme cs) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              '${_dates.length} hari dalam periode',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-            ),
-            const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowHeight: 48,
-                dataRowHeight: 56,
-                headingRowColor: MaterialStateProperty.all(
-                  cs.primary.withOpacity(0.1),
-                ),
-                border: TableBorder.all(color: Colors.grey.shade200, width: 1),
-                columns: [
-                  const DataColumn(
-                    label: Padding(
-                      padding: EdgeInsets.all(8),
-                      child: Text(
-                        'Nama',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                      const SizedBox(height: 24),
+                      // Info Card Periode
+                      Card(
+                        elevation: 8,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
                         ),
-                      ),
-                    ),
-                  ),
-                  ..._dates.map(
-                    (d) => DataColumn(
-                      label: Padding(
-                        padding: const EdgeInsets.all(4),
-                        child: Text(
-                          d.substring(8, 10),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: 12,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-                rows: _pivot.keys.map((nama) {
-                  return DataRow(
-                    cells: [
-                      DataCell(
-                        Padding(
-                          padding: const EdgeInsets.all(8),
-                          child: Text(
-                            nama,
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                      ),
-                      ..._dates.map((d) {
-                        final val = _pivot[nama]![d] ?? '';
-                        return DataCell(
-                          Center(
-                            child: val.isEmpty
-                                ? const Icon(
-                                    Icons.close,
-                                    size: 16,
-                                    color: Colors.grey,
-                                  )
-                                : Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: val == 'Masuk'
-                                          ? Colors.green.withOpacity(0.2)
-                                          : Colors.orange.withOpacity(0.2),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      val == 'Masuk'
-                                          ? Icons.login
-                                          : Icons.logout,
-                                      size: 16,
-                                      color: val == 'Masuk'
-                                          ? Colors.green
-                                          : Colors.orange,
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Periode Rekap',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
                                     ),
                                   ),
+                                  Text(
+                                    '${_getIndonesianMonth(_selectedMonth)} $_selectedYear',
+                                    style: const TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    'Total Entri',
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${_data.length}',
+                                    style: TextStyle(
+                                      fontSize: 36,
+                                      fontWeight: FontWeight.bold,
+                                      color: cs.primary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        );
-                      }),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      // Legend Card
+                      Card(
+                        elevation: 4,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Keterangan',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              _buildLegend(),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      // Title
+                      const Text(
+                        'Rekap Harian Guru',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // DataTable Card
+                      Card(
+                        elevation: 10,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: DataTable(
+                              headingRowHeight: 70,
+                              dataRowHeight: 70,
+                              columnSpacing: 12,
+                              headingTextStyle: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                              ),
+                              columns: [
+                                const DataColumn(
+                                  label: Text(
+                                    'Nama Guru',
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                ..._allDates.map((d) {
+                                  final dayNum = d.substring(8);
+                                  final isWeekend = _isWeekend(d);
+                                  final date = DateTime.parse(d);
+                                  final dayAbbrev = _getIndonesianDayAbbrev(
+                                    date,
+                                  );
+                                  return DataColumn(
+                                    label: Column(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          dayNum,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
+                                        Text(
+                                          dayAbbrev,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isWeekend
+                                                ? Colors.red
+                                                : Colors.grey[600],
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }),
+                              ],
+                              rows: (_pivot.keys.toList()..sort()).map((nama) {
+                                return DataRow(
+                                  cells: [
+                                    DataCell(
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8,
+                                        ),
+                                        child: Text(
+                                          nama,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w600,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    ..._allDates.map((d) {
+                                      if (_isWeekend(d)) {
+                                        return DataCell(
+                                          Center(
+                                            child: Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.grey[100],
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
+                                              ),
+                                              child: const Text(
+                                                'Libur',
+                                                style: TextStyle(
+                                                  color: Colors.grey,
+                                                  fontStyle: FontStyle.italic,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                      if (_isFuture(d)) {
+                                        return const DataCell(Text(''));
+                                      }
+                                      final val = _pivot[nama]![d] ?? '-';
+                                      final flutterColor = _getFlutterColor(
+                                        val,
+                                      );
+
+                                      return DataCell(
+                                        Center(
+                                          child: val == '-'
+                                              ? Text(
+                                                  val,
+                                                  style: const TextStyle(
+                                                    color: Colors.grey,
+                                                  ),
+                                                )
+                                              : Container(
+                                                  width: 40,
+                                                  height: 40,
+                                                  decoration: BoxDecoration(
+                                                    color: flutterColor
+                                                        .withOpacity(0.2),
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(
+                                                      color: flutterColor
+                                                          .withOpacity(0.5),
+                                                      width: 1,
+                                                    ),
+                                                  ),
+                                                  child: Center(
+                                                    child: Text(
+                                                      val,
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: flutterColor,
+                                                        fontSize: 18,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 40),
                     ],
-                  );
-                }).toList(),
+                  ),
+                ),
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

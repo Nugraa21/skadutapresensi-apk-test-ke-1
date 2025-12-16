@@ -66,7 +66,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
   }
 
   Future<void> _showDetailDialog(dynamic item) async {
-    final status = item['status'] ?? 'Pending';
+    final status = item['status'] ?? 'Waiting';
     final baseUrl = ApiService.baseUrl;
     final selfie = item['selfie'];
     final dokumen = item['dokumen'];
@@ -320,7 +320,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                   ),
                 ),
               ),
-              if (status == 'Pending')
+              if (status == 'Waiting')
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: const BoxDecoration(
@@ -569,7 +569,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
               style: const TextStyle(color: Colors.white, fontSize: 16),
               underline: const SizedBox(),
               dropdownColor: cs.primary, // Dark background for dropdown menu
-              items: ['All', 'Pending', 'Disetujui', 'Ditolak']
+              items: ['All', 'Waiting', 'Disetujui', 'Ditolak']
                   .map(
                     (s) => DropdownMenuItem(
                       value: s,
@@ -668,7 +668,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                               itemCount: _filteredItems.length,
                               itemBuilder: (ctx, i) {
                                 final item = _filteredItems[i];
-                                final status = item['status'] ?? 'Pending';
+                                final status = item['status'] ?? 'Waiting';
                                 final statusColor = status == 'Disetujui'
                                     ? Colors.green
                                     : status == 'Ditolak'
@@ -831,7 +831,7 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                                         ],
                                       ],
                                     ),
-                                    trailing: status == 'Pending'
+                                    trailing: status == 'Waiting'
                                         ? const Icon(
                                             Icons.arrow_forward_ios_rounded,
                                             size: 20,

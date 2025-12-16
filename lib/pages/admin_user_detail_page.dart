@@ -23,7 +23,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
 
   bool _loading = true;
   List<dynamic> _history = [];
-  List<dynamic> _pendingPresensi = [];
+  List<dynamic> _WaitingPresensi = [];
 
   @override
   void initState() {
@@ -62,15 +62,15 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
 
       // 2. Cari presensi yang masih pending
       final allPresensi = await ApiService.getAllPresensi();
-      final pending = allPresensi
+      final Waiting = allPresensi
           .where(
             (p) =>
                 p['user_id'].toString() == widget.userId &&
-                (p['status'] ?? '').toString() == 'Pending',
+                (p['status'] ?? '').toString() == 'Waiting',
           )
           .toList();
 
-      if (mounted) setState(() => _pendingPresensi = pending);
+      if (mounted) setState(() => _WaitingPresensi = Waiting);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -223,7 +223,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
         itemCount: _history.length,
         itemBuilder: (_, i) {
           final item = _history[i];
-          final status = item['status'] ?? 'Pending';
+          final status = item['status'] ?? 'Waiting';
           final Color statusColor = status == 'Disetujui'
               ? Colors.green
               : status == 'Ditolak'
@@ -385,20 +385,20 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
     );
   }
 
-  Widget _buildPendingTab() {
+  Widget _buildWaitingTab() {
     if (_loading)
       return const Center(
         child: CircularProgressIndicator(strokeWidth: 4, color: Colors.blue),
       );
-    if (_pendingPresensi.isEmpty) {
+    if (_WaitingPresensi.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.pending_actions, size: 80, color: Colors.grey[300]),
+            Icon(Icons.pending, size: 80, color: Colors.grey[300]),
             SizedBox(height: 16),
             Text(
-              'Tidak ada presensi pending',
+              'Tidak ada presensi Waiting',
               style: TextStyle(
                 fontSize: 18,
                 color: Colors.grey[500],
@@ -414,9 +414,9 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
       onRefresh: _loadData,
       child: ListView.builder(
         padding: const EdgeInsets.all(16),
-        itemCount: _pendingPresensi.length,
+        itemCount: _WaitingPresensi.length,
         itemBuilder: (_, i) {
-          final item = _pendingPresensi[i];
+          final item = _WaitingPresensi[i];
           final created = DateTime.parse(
             item['created_at'] ?? DateTime.now().toIso8601String(),
           );
@@ -533,7 +533,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
                         Icon(Icons.pending, color: Colors.orange, size: 20),
                         SizedBox(width: 4),
                         Text(
-                          'Status: Pending',
+                          'Status: Waiting',
                           style: TextStyle(
                             color: Colors.orange,
                             fontWeight: FontWeight.w600,
@@ -614,7 +614,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
           unselectedLabelColor: Colors.white70,
           tabs: const [
             Tab(icon: Icon(Icons.history_rounded), text: 'Riwayat'),
-            Tab(icon: Icon(Icons.pending_actions_rounded), text: 'Pending'),
+            Tab(icon: Icon(Icons.pending_actions_rounded), text: 'Waiting'),
           ],
         ),
       ),
@@ -626,7 +626,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
             end: Alignment.bottomCenter,
           ),
         ),
-        child: _loading && _history.isEmpty && _pendingPresensi.isEmpty
+        child: _loading && _history.isEmpty && _WaitingPresensi.isEmpty
             ? const Center(
                 child: CircularProgressIndicator(
                   strokeWidth: 4,
@@ -642,7 +642,7 @@ class _AdminUserDetailPageState extends State<AdminUserDetailPage>
                 ),
                 child: TabBarView(
                   controller: _tabController,
-                  children: [_buildHistoryTab(), _buildPendingTab()],
+                  children: [_buildHistoryTab(), _buildWaitingTab()],
                 ),
               ),
       ),

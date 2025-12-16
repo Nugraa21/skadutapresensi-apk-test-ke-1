@@ -214,7 +214,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
         final item = _filteredItems[index - 1];
 
-        final status = (item['status'] ?? 'Pending').toString();
+        final status = (item['status'] ?? 'Waiting').toString();
         Color statusColor = Colors.orange;
         if (status == 'Disetujui') statusColor = Colors.green;
         if (status == 'Ditolak') statusColor = Colors.red;

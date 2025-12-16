@@ -1,8 +1,8 @@
 import 'dart:convert';
+import 'dart:io' show Platform, SocketException, HttpException;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'dart:io' show Platform;
 import '../utils/encryption.dart';
 
 class ApiService {
@@ -12,6 +12,52 @@ class ApiService {
 
   // API Key harus sama persis dengan yang di config.php
   static const String _apiKey = 'Skaduta2025!@#SecureAPIKey1234567890';
+
+  /// Wrapper aman untuk semua request HTTP
+  /// Menangani error jaringan/offline dengan pesan ramah ke user
+  static Future<Map<String, dynamic>> _safeRequest(
+    Future<http.Response> Function() request,
+  ) async {
+    try {
+      final res = await request().timeout(
+        const Duration(seconds: 20),
+        onTimeout: () {
+          throw SocketException('Connection timed out');
+        },
+      );
+
+      // Jika status code bukan 200, anggap error server
+      if (res.statusCode != 200) {
+        return {
+          "status": false,
+          "message": "Pastikan password atau username benar.",
+        };
+      }
+
+      return _safeDecrypt(res);
+    } on SocketException catch (_) {
+      return {
+        "status": false,
+        "message": "Kamu sedang offline. Periksa koneksi internetmu.",
+      };
+    } on http.ClientException catch (_) {
+      return {
+        "status": false,
+        "message": "Tidak dapat terhubung ke server. Pastikan kamu online.",
+      };
+    } on HttpException catch (_) {
+      return {
+        "status": false,
+        "message": "Koneksi ke server gagal. Coba lagi.",
+      };
+    } catch (e) {
+      print("UNEXPECTED API ERROR: $e");
+      return {
+        "status": false,
+        "message": "Terjadi kesalahan. Coba lagi nanti.",
+      };
+    }
+  }
 
   /// Get device ID for binding (skip for Windows desktop)
   static Future<String> getDeviceId() async {
@@ -44,7 +90,7 @@ class ApiService {
     return {
       'Content-Type': 'application/json',
       'X-App-Key': _apiKey,
-      'ngrok-skip-browser-warning': 'true', // Bypass halaman warning ngrok free
+      'ngrok-skip-browser-warning': 'true',
       if (withToken && token != null) 'Authorization': 'Bearer $token',
     };
   }
@@ -77,41 +123,51 @@ class ApiService {
   // ================== GET DATA (ENKRIPSI) ==================
   static Future<List<dynamic>> getUsers() async {
     final headers = await _getHeaders();
-    final res = await http.get(
-      Uri.parse("$baseUrl/get_users.php"),
-      headers: headers,
+    final result = await _safeRequest(
+      () => http.get(Uri.parse("$baseUrl/get_users.php"), headers: headers),
     );
-    final data = _safeDecrypt(res);
-    return List<dynamic>.from(data['data'] ?? []);
+
+    if (result['status'] == false) return [];
+    return List<dynamic>.from(result['data'] ?? []);
   }
 
   static Future<List<dynamic>> getUserHistory(String userId) async {
     final headers = await _getHeaders();
-    final res = await http.get(
-      Uri.parse("$baseUrl/absen_history.php?user_id=$userId"),
-      headers: headers,
+    final result = await _safeRequest(
+      () => http.get(
+        Uri.parse("$baseUrl/absen_history.php?user_id=$userId"),
+        headers: headers,
+      ),
     );
-    final data = _safeDecrypt(res);
-    return List<dynamic>.from(data['data'] ?? []);
+
+    if (result['status'] == false) return [];
+    return List<dynamic>.from(result['data'] ?? []);
   }
 
   static Future<List<dynamic>> getAllPresensi() async {
     final headers = await _getHeaders();
-    final res = await http.get(
-      Uri.parse("$baseUrl/absen_admin_list.php"),
-      headers: headers,
+    final result = await _safeRequest(
+      () => http.get(
+        Uri.parse("$baseUrl/absen_admin_list.php"),
+        headers: headers,
+      ),
     );
-    final data = _safeDecrypt(res);
-    return List<dynamic>.from(data['data'] ?? []);
+
+    if (result['status'] == false) return [];
+    return List<dynamic>.from(result['data'] ?? []);
   }
 
   static Future<List<dynamic>> getRekap({String? month, String? year}) async {
     final headers = await _getHeaders();
     var url = "$baseUrl/presensi_rekap.php";
     if (month != null && year != null) url += "?month=$month&year=$year";
-    final res = await http.get(Uri.parse(url), headers: headers);
-    final data = _safeDecrypt(res);
-    return List<dynamic>.from(data['data'] ?? []);
+
+    final result = await _safeRequest(
+      () => http.get(Uri.parse(url), headers: headers),
+    );
+
+    if (result['status'] == false) return [];
+    return List<dynamic>.from(result['data'] ?? []);
   }
 
   // ================== LOGIN ==================
@@ -120,19 +176,19 @@ class ApiService {
     required String password,
   }) async {
     final deviceId = await getDeviceId();
-
     final headers = await _getHeaders(withToken: false);
-    final res = await http.post(
-      Uri.parse("$baseUrl/login.php"),
-      headers: headers,
-      body: jsonEncode({
-        "username": input,
-        "password": password,
-        "device_id": deviceId,
-      }),
-    );
 
-    final result = _safeDecrypt(res);
+    final result = await _safeRequest(
+      () => http.post(
+        Uri.parse("$baseUrl/login.php"),
+        headers: headers,
+        body: jsonEncode({
+          "username": input,
+          "password": password,
+          "device_id": deviceId,
+        }),
+      ),
+    );
 
     // Simpan token & user info kalau login berhasil
     if (result['status'] == true && result['token'] != null) {
@@ -141,10 +197,7 @@ class ApiService {
       await prefs.setString('user_id', result['user']['id'].toString());
       await prefs.setString('user_name', result['user']['nama_lengkap']);
       await prefs.setString('user_role', result['user']['role']);
-      await prefs.setString(
-        'device_id',
-        deviceId,
-      ); // Optional: store for future checks
+      await prefs.setString('device_id', deviceId);
     }
     return result;
   }
@@ -183,22 +236,25 @@ class ApiService {
     required bool isKaryawan,
   }) async {
     final deviceId = await getDeviceId();
-
     final headers = await _getHeaders(withToken: false);
-    final res = await http.post(
-      Uri.parse("$baseUrl/register.php"),
-      headers: headers,
-      body: jsonEncode({
-        "username": username,
-        "nama_lengkap": namaLengkap,
-        "nip_nisn": nipNisn,
-        "password": password,
-        "role": role,
-        "is_karyawan": isKaryawan,
-        "device_id": deviceId,
-      }),
+
+    final result = await _safeRequest(
+      () => http.post(
+        Uri.parse("$baseUrl/register.php"),
+        headers: headers,
+        body: jsonEncode({
+          "username": username,
+          "nama_lengkap": namaLengkap,
+          "nip_nisn": nipNisn,
+          "password": password,
+          "role": role,
+          "is_karyawan": isKaryawan,
+          "device_id": deviceId,
+        }),
+      ),
     );
-    return _safeDecrypt(res);
+
+    return result;
   }
 
   // ================== SUBMIT PRESENSI ==================
@@ -213,21 +269,25 @@ class ApiService {
     required String base64Image,
   }) async {
     final headers = await _getHeaders();
-    final res = await http.post(
-      Uri.parse("$baseUrl/absen.php"),
-      headers: headers,
-      body: jsonEncode({
-        "userId": userId,
-        "jenis": jenis,
-        "keterangan": keterangan,
-        "informasi": informasi,
-        "dokumenBase64": dokumenBase64,
-        "latitude": latitude,
-        "longitude": longitude,
-        "base64Image": base64Image,
-      }),
+
+    final result = await _safeRequest(
+      () => http.post(
+        Uri.parse("$baseUrl/absen.php"),
+        headers: headers,
+        body: jsonEncode({
+          "userId": userId,
+          "jenis": jenis,
+          "keterangan": keterangan,
+          "informasi": informasi,
+          "dokumenBase64": dokumenBase64,
+          "latitude": latitude,
+          "longitude": longitude,
+          "base64Image": base64Image,
+        }),
+      ),
     );
-    return _safeDecrypt(res);
+
+    return result;
   }
 
   // ================== APPROVE PRESENSI ==================
@@ -236,26 +296,34 @@ class ApiService {
     required String status,
   }) async {
     final headers = await _getHeaders();
-    final res = await http.post(
-      Uri.parse("$baseUrl/presensi_approve.php"),
-      headers: headers,
-      body: jsonEncode({
-        "id": id.trim(),
-        "status": status, // "Disetujui" atau "Ditolak"
-      }),
+
+    final result = await _safeRequest(
+      () => http.post(
+        Uri.parse("$baseUrl/presensi_approve.php"),
+        headers: headers,
+        body: jsonEncode({
+          "id": id.trim(),
+          "status": status, // "Disetujui" atau "Ditolak"
+        }),
+      ),
     );
-    return _safeDecrypt(res);
+
+    return result;
   }
 
   // ================== DELETE USER ==================
   static Future<Map<String, dynamic>> deleteUser(String id) async {
     final headers = await _getHeaders();
-    final res = await http.post(
-      Uri.parse("$baseUrl/delete_user.php"),
-      headers: headers,
-      body: jsonEncode({"id": id}),
+
+    final result = await _safeRequest(
+      () => http.post(
+        Uri.parse("$baseUrl/delete_user.php"),
+        headers: headers,
+        body: jsonEncode({"id": id}),
+      ),
     );
-    return _safeDecrypt(res);
+
+    return result;
   }
 
   // ================== UPDATE USER ==================
@@ -277,11 +345,14 @@ class ApiService {
       if (password != null && password.isNotEmpty) "password": password,
     };
 
-    final res = await http.post(
-      Uri.parse("$baseUrl/update_user.php"),
-      headers: headers,
-      body: jsonEncode(body),
+    final result = await _safeRequest(
+      () => http.post(
+        Uri.parse("$baseUrl/update_user.php"),
+        headers: headers,
+        body: jsonEncode(body),
+      ),
     );
-    return _safeDecrypt(res);
+
+    return result;
   }
 }

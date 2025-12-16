@@ -301,39 +301,39 @@ class _RegisterPageState extends State<RegisterPage> {
                                 color: cs.primary.withOpacity(0.4),
                               ),
                             ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _role,
-                                isExpanded: true,
-                                icon: Icon(
-                                  Icons.arrow_drop_down,
-                                  color: cs.primary,
-                                  size: 32,
-                                ),
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.black87,
-                                ),
-                                dropdownColor: Colors.white,
-                                borderRadius: BorderRadius.circular(16),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'user',
-                                    child: Text('User (Karyawan / Guru)'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'admin',
-                                    child: Text('Admin'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'superadmin',
-                                    child: Text('Super Admin'),
-                                  ),
-                                ],
-                                onChanged: (val) =>
-                                    setState(() => _role = val!),
-                              ),
-                            ),
+                            // child: DropdownButtonHideUnderline(
+                            //   child: DropdownButton<String>(
+                            //     value: _role,
+                            //     isExpanded: true,
+                            //     icon: Icon(
+                            //       Icons.arrow_drop_down,
+                            //       color: cs.primary,
+                            //       size: 32,
+                            //     ),
+                            //     style: const TextStyle(
+                            //       fontSize: 18,
+                            //       color: Colors.black87,
+                            //     ),
+                            //     dropdownColor: Colors.white,
+                            //     borderRadius: BorderRadius.circular(16),
+                            //     items: const [
+                            //       DropdownMenuItem(
+                            //         value: 'user',
+                            //         child: Text('User (Karyawan / Guru)'),
+                            //       ),
+                            //       DropdownMenuItem(
+                            //         value: 'admin',
+                            //         child: Text('Admin'),
+                            //       ),
+                            //       DropdownMenuItem(
+                            //         value: 'superadmin',
+                            //         child: Text('Super Admin'),
+                            //       ),
+                            //     ],
+                            //     onChanged: (val) =>
+                            //         setState(() => _role = val!),
+                            //   ),
+                            // ),
                           ),
                           const SizedBox(height: 32),
 
