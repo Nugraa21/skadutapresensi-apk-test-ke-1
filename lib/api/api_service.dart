@@ -91,7 +91,7 @@ class ApiService {
       if (res.statusCode == 401) {
         return {
           "status": false,
-          "message": "Token autentikasi tidak valid. Silakan login ulang.",
+          "message": "Periksa password dan username anda.",
         };
       } else if (res.statusCode == 403) {
         return {
