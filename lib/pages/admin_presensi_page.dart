@@ -10,15 +10,33 @@ class AdminPresensiPage extends StatefulWidget {
   State<AdminPresensiPage> createState() => _AdminPresensiPageState();
 }
 
-class _AdminPresensiPageState extends State<AdminPresensiPage> {
+class _AdminPresensiPageState extends State<AdminPresensiPage>
+    with SingleTickerProviderStateMixin {
   bool _loading = false;
   List<dynamic> _items = [];
   String _filterStatus = 'All';
 
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
+    _fadeController.forward();
     _loadPresensi();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadPresensi() async {
@@ -44,6 +62,10 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
           SnackBar(
             content: Text('Gagal ambil data presensi: $e'),
             backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.all(Radius.circular(12)),
+            ),
           ),
         );
       }
@@ -62,7 +84,47 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
   String _shortenText(String text, {int maxLength = 50}) {
     if (text.isEmpty) return '';
     if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength.clamp(0, text.length)) + '...';
+    return '${text.substring(0, maxLength)}...';
+  }
+
+  IconData _getJenisIconData(String jenis) {
+    switch (jenis) {
+      case 'Masuk':
+      case 'Penugasan_Masuk':
+        return Icons.login_rounded;
+      case 'Pulang':
+      case 'Penugasan_Pulang':
+        return Icons.logout_rounded;
+      case 'Izin':
+        return Icons.sick_rounded;
+      case 'Pulang Cepat':
+        return Icons.fast_forward_rounded;
+      case 'Penugasan':
+      case 'Penugasan_Full':
+        return Icons.assignment_rounded;
+      default:
+        return Icons.schedule_rounded;
+    }
+  }
+
+  Color _getJenisColor(String jenis) {
+    switch (jenis) {
+      case 'Masuk':
+      case 'Penugasan_Masuk':
+        return Colors.green;
+      case 'Pulang':
+      case 'Penugasan_Pulang':
+        return Colors.orange;
+      case 'Izin':
+        return Colors.red;
+      case 'Pulang Cepat':
+        return Colors.blue;
+      case 'Penugasan':
+      case 'Penugasan_Full':
+        return Colors.purple;
+      default:
+        return Colors.grey;
+    }
   }
 
   Future<void> _showDetailDialog(dynamic item) async {
@@ -84,19 +146,37 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Container(
-          constraints: const BoxConstraints(maxHeight: 600, maxWidth: 500),
+          constraints: const BoxConstraints(maxHeight: 700, maxWidth: 500),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Header Dialog
               Container(
-                padding: const EdgeInsets.all(16),
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
+                  gradient: LinearGradient(
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                    ],
+                  ),
                   borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
                   ),
                 ),
                 child: Row(
@@ -114,15 +194,27 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                           : Colors.orange,
                       size: 32,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                     Expanded(
-                      child: Text(
-                        '${item['nama_lengkap']} - ${item['jenis']}',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item['nama_lengkap'] ?? 'Unknown',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            item['jenis'] ?? '-',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 15,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     IconButton(
@@ -134,35 +226,33 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
               ),
               Flexible(
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Tanggal: $formattedDate',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      _buildInfoRow(
+                        Icons.calendar_today,
+                        'Tanggal',
+                        formattedDate,
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Keterangan: ${item['keterangan'] ?? '-'}',
-                        style: const TextStyle(fontSize: 16),
+                      const SizedBox(height: 12),
+                      _buildInfoRow(
+                        Icons.description,
+                        'Keterangan',
+                        item['keterangan'] ?? '-',
                       ),
                       if (item['informasi'] != null &&
-                          item['informasi'].toString().isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          'Informasi Penugasan: ${item['informasi']}',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
+                          item['informasi'].toString().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 12),
+                          child: _buildInfoRow(
+                            Icons.info_outline,
+                            'Informasi Penugasan',
+                            item['informasi'],
                           ),
                         ),
-                      ],
                       if (fotoUrl != null) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         const Text(
                           'Foto Presensi:',
                           style: TextStyle(
@@ -174,66 +264,51 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                         GestureDetector(
                           onTap: () => _showFullPhoto(fotoUrl),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                             child: Image.network(
                               fotoUrl,
-                              height: 200,
+                              height: 220,
                               width: double.infinity,
                               fit: BoxFit.cover,
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return const Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    );
-                                  },
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                    height: 200,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[100],
-                                      borderRadius: BorderRadius.circular(8),
+                              loadingBuilder: (context, child, progress) =>
+                                  progress == null
+                                  ? child
+                                  : const Center(
+                                      child: CircularProgressIndicator(),
                                     ),
-                                    child: const Icon(
-                                      Icons.error,
-                                      size: 50,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
+                              errorBuilder: (_, __, ___) => Container(
+                                height: 220,
+                                color: Colors.grey[200],
+                                child: const Icon(Icons.error, size: 50),
+                              ),
                             ),
                           ),
                         ),
                       ] else ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Row(
-                            children: [
-                              const Icon(
+                            children: const [
+                              Icon(
                                 Icons.image_not_supported,
                                 color: Colors.grey,
-                                size: 32,
                               ),
-                              const SizedBox(width: 8),
-                              const Text(
-                                'Tidak ada foto',
-                                style: TextStyle(
-                                  color: Colors.grey,
-                                  fontSize: 16,
-                                ),
+                              SizedBox(width: 12),
+                              Text(
+                                'Tidak ada foto presensi',
+                                style: TextStyle(color: Colors.grey),
                               ),
                             ],
                           ),
                         ),
                       ],
                       if (dokumenUrl != null) ...[
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 16),
                         const Text(
                           'Dokumen Penugasan:',
                           style: TextStyle(
@@ -245,26 +320,26 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                         GestureDetector(
                           onTap: () => _showFullDokumen(dokumenUrl),
                           child: Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Colors.blue[50],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.blue),
+                              color: Colors.amber.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: Colors.amber.withOpacity(0.4),
+                              ),
                             ),
                             child: Row(
                               children: [
                                 const Icon(
-                                  Icons.attachment,
-                                  color: Colors.blue,
-                                  size: 24,
+                                  Icons.attachment_rounded,
+                                  color: Colors.amber,
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: 12),
                                 Expanded(
                                   child: Text(
                                     'Lihat Dokumen (${item['dokumen']})',
                                     style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
                                 ),
@@ -273,9 +348,9 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 16),
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
                           color:
                               (status == 'Disetujui'
@@ -284,33 +359,32 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                                       ? Colors.red
                                       : Colors.orange)
                                   .withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                         child: Row(
                           children: [
                             Icon(
-                              (status == 'Disetujui'
+                              status == 'Disetujui'
                                   ? Icons.check_circle
                                   : status == 'Ditolak'
                                   ? Icons.cancel
-                                  : Icons.pending),
-                              color: (status == 'Disetujui'
+                                  : Icons.pending,
+                              color: status == 'Disetujui'
                                   ? Colors.green
                                   : status == 'Ditolak'
                                   ? Colors.red
-                                  : Colors.orange),
+                                  : Colors.orange,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 12),
                             Text(
                               'Status Saat Ini: $status',
                               style: TextStyle(
-                                fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: (status == 'Disetujui'
+                                color: status == 'Disetujui'
                                     ? Colors.green
                                     : status == 'Ditolak'
                                     ? Colors.red
-                                    : Colors.orange),
+                                    : Colors.orange,
                               ),
                             ),
                           ],
@@ -320,12 +394,14 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                   ),
                 ),
               ),
+              // Tombol Aksi
               if (status == 'Waiting')
                 Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: const BoxDecoration(
-                    border: Border(top: BorderSide(color: Colors.grey)),
-                    color: Colors.white,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -335,10 +411,17 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                           Navigator.pop(context);
                           _updateStatus(item['id'].toString(), 'Disetujui');
                         },
-                        icon: const Icon(Icons.check, color: Colors.white),
+                        icon: const Icon(Icons.check, size: 18),
                         label: const Text('Setujui'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                       ElevatedButton.icon(
@@ -346,10 +429,17 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                           Navigator.pop(context);
                           _updateStatus(item['id'].toString(), 'Ditolak');
                         },
-                        icon: const Icon(Icons.close, color: Colors.white),
+                        icon: const Icon(Icons.close, size: 18),
                         label: const Text('Tolak'),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
                       ),
                     ],
@@ -357,17 +447,21 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                 )
               else
                 Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: const BoxDecoration(
-                    border: Border(top: BorderSide(color: Colors.grey)),
-                    color: Colors.white,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      top: BorderSide(color: Colors.grey.withOpacity(0.3)),
+                    ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      ElevatedButton(
+                      TextButton(
                         onPressed: () => Navigator.pop(context),
-                        child: const Text('Tutup'),
+                        child: const Text(
+                          'Tutup',
+                          style: TextStyle(fontSize: 16),
+                        ),
                       ),
                     ],
                   ),
@@ -379,12 +473,36 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
     );
   }
 
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 12),
+        Expanded(
+          child: RichText(
+            text: TextSpan(
+              style: const TextStyle(fontSize: 16, color: Colors.black87),
+              children: [
+                TextSpan(
+                  text: '$label: ',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                TextSpan(text: value),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
   void _showFullPhoto(String url) {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        backgroundColor: Colors.black,
-        insetPadding: const EdgeInsets.all(16),
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
         child: Stack(
           children: [
             Center(
@@ -393,11 +511,12 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
               ),
             ),
             Positioned(
-              top: 16,
-              right: 16,
+              top: 40,
+              right: 20,
               child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white),
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
                 onPressed: () => Navigator.pop(context),
+                style: IconButton.styleFrom(backgroundColor: Colors.black54),
               ),
             ),
           ],
@@ -419,20 +538,25 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
   void _showFullDokumen(String url) {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        insetPadding: const EdgeInsets.all(16),
+      builder: (_) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: SizedBox(
           width: MediaQuery.of(context).size.width * 0.9,
-          height: MediaQuery.of(context).size.height * 0.7,
+          height: MediaQuery.of(context).size.height * 0.75,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
-                  vertical: 8,
+                  vertical: 12,
                 ),
-                color: Theme.of(context).colorScheme.primary,
+                decoration: BoxDecoration(
+                  color: Colors.amber[600],
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
+                  ),
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -463,25 +587,28 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
                 ),
               ),
               Expanded(
-                child: Center(
-                  child: InteractiveViewer(
-                    child: Image.network(
-                      url,
-                      fit: BoxFit.contain,
-                      errorBuilder: (context, error, stackTrace) => Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                child: InteractiveViewer(
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.insert_drive_file, size: 64),
+                          const Icon(
+                            Icons.insert_drive_file,
+                            size: 64,
+                            color: Colors.grey,
+                          ),
                           const SizedBox(height: 16),
                           const Text(
                             'Dokumen tidak dapat ditampilkan di sini.',
-                            textAlign: TextAlign.center,
                           ),
-                          const SizedBox(height: 8),
+                          const SizedBox(height: 12),
                           ElevatedButton.icon(
-                            onPressed: () => _launchInBrowser(url),
                             icon: const Icon(Icons.open_in_browser),
-                            label: Text('Buka di Browser'),
+                            label: const Text('Buka di Browser'),
+                            onPressed: () => _launchInBrowser(url),
                           ),
                         ],
                       ),
@@ -502,25 +629,25 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
         id: id,
         status: newStatus,
       );
-
       if (!mounted) return;
-
-      if (res['status'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(res['message'] ?? 'Status berhasil diupdate'),
-            backgroundColor: Colors.green.shade600,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            res['message'] ??
+                (res['status'] == true
+                    ? 'Status berhasil diupdate'
+                    : 'Gagal update status'),
           ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(res['message'] ?? 'Gagal update status'),
-            backgroundColor: Colors.red.shade600,
+          backgroundColor: res['status'] == true
+              ? Colors.green.shade600
+              : Colors.red.shade600,
+          behavior: SnackBarBehavior.floating,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
           ),
-        );
-      }
-      _loadPresensi(); // Refresh daftar presensi
+        ),
+      );
+      _loadPresensi();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -531,22 +658,10 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
     }
   }
 
-  Icon? _getJenisIcon(String jenis) {
-    if (jenis == 'Masuk') {
-      return Icon(Icons.login_rounded, color: Colors.green, size: 24);
-    } else if (jenis == 'Pulang') {
-      return Icon(Icons.logout_rounded, color: Colors.orange, size: 24);
-    } else if (jenis == 'Izin') {
-      return Icon(Icons.sick_rounded, color: Colors.red, size: 24);
-    } else if (jenis == 'Penugasan') {
-      return Icon(Icons.assignment_rounded, color: Colors.purple, size: 24);
-    }
-    return null;
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -558,34 +673,36 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
         elevation: 0,
         foregroundColor: Colors.white,
         actions: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
+          PopupMenuButton<String>(
+            icon: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(30),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    _filterStatus,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  const Icon(Icons.arrow_drop_down, color: Colors.white),
+                ],
+              ),
             ),
-            child: DropdownButton<String>(
-              value: _filterStatus,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-              underline: const SizedBox(),
-              dropdownColor: cs.primary, // Dark background for dropdown menu
-              items: ['All', 'Waiting', 'Disetujui', 'Ditolak']
-                  .map(
-                    (s) => DropdownMenuItem(
-                      value: s,
-                      child: Text(
-                        s,
-                        style: const TextStyle(
-                          color: Colors.white,
-                        ), // White text for visibility
-                      ),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (v) => setState(() => _filterStatus = v ?? 'All'),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
             ),
+            color: cs.surface,
+            itemBuilder: (_) => [
+              'All',
+              'Waiting',
+              'Disetujui',
+              'Ditolak',
+            ].map((s) => PopupMenuItem(value: s, child: Text(s))).toList(),
+            onSelected: (v) => setState(() => _filterStatus = v),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 12),
         ],
         flexibleSpace: Container(
           decoration: BoxDecoration(
@@ -608,249 +725,280 @@ class _AdminPresensiPageState extends State<AdminPresensiPage> {
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 100, 16, 16),
-              child: Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Text(
-                    'Total: ${_filteredItems.length}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 100, 16, 16),
+                child: Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Icon(Icons.history, size: 28, color: Colors.blue),
+                        Text(
+                          'Total: ${_filteredItems.length}',
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Icon(Icons.people, size: 28, color: Colors.blue),
+                      ],
                     ),
                   ),
                 ),
               ),
-            ),
-            Expanded(
-              child: _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 4,
-                        color: Colors.blue,
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadPresensi,
-                      child: _filteredItems.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.pending_actions,
-                                    size: 80,
-                                    color: Colors.grey.shade300,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    'Tidak ada presensi ${_filterStatus.toLowerCase()}',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color: Colors.grey.shade500,
-                                      fontWeight: FontWeight.w500,
+              Expanded(
+                child: _loading
+                    ? const Center(
+                        child: CircularProgressIndicator(strokeWidth: 4),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadPresensi,
+                        child: _filteredItems.isEmpty
+                            ? Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.pending_actions_rounded,
+                                      size: 100,
+                                      color: Colors.grey.shade400,
                                     ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              itemCount: _filteredItems.length,
-                              itemBuilder: (ctx, i) {
-                                final item = _filteredItems[i];
-                                final status = item['status'] ?? 'Waiting';
-                                final statusColor = status == 'Disetujui'
-                                    ? Colors.green
-                                    : status == 'Ditolak'
-                                    ? Colors.red
-                                    : Colors.orange;
-                                final created = DateTime.parse(
-                                  item['created_at'] ??
-                                      DateTime.now().toIso8601String(),
-                                );
-                                final formattedDate = DateFormat(
-                                  'dd MMM',
-                                ).format(created);
-                                final baseUrl = ApiService.baseUrl;
-                                final selfie = item['selfie'];
-                                final fotoUrl =
-                                    selfie != null &&
-                                        selfie.toString().isNotEmpty
-                                    ? '$baseUrl/selfie/$selfie'
-                                    : null;
-                                final informasi =
-                                    item['informasi']?.toString() ?? '';
-
-                                return Card(
-                                  elevation: 4,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  margin: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                  ),
-                                  child: ListTile(
-                                    onTap: () => _showDetailDialog(item),
-                                    leading: CircleAvatar(
-                                      backgroundColor: cs.primary.withOpacity(
-                                        0.1,
-                                      ),
-                                      child:
-                                          _getJenisIcon(item['jenis'] ?? '') ??
-                                          Text(
-                                            (item['nama_lengkap'] ?? '?')[0]
-                                                .toUpperCase(),
-                                            style: TextStyle(
-                                              color: cs.primary,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                    ),
-                                    title: Text(
-                                      '${item['nama_lengkap'] ?? ''} - ${item['jenis'] ?? ''}',
+                                    const SizedBox(height: 20),
+                                    Text(
+                                      'Tidak ada presensi ${_filterStatus == 'All' ? '' : _filterStatus.toLowerCase()}',
                                       style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 16,
+                                        fontSize: 18,
+                                        color: Colors.grey,
                                       ),
                                     ),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          'Tgl: $formattedDate',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                        Text(
-                                          'Ket: ${item['keterangan'] ?? '-'}',
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            color: Colors.grey.shade600,
-                                          ),
-                                        ),
-                                        if (informasi.isNotEmpty)
-                                          Text(
-                                            'Info: ${_shortenText(informasi)}',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              color: Colors.grey.shade600,
-                                            ),
-                                          ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                            vertical: 2,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: statusColor.withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                          child: Text(
-                                            'Status: $status',
-                                            style: TextStyle(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w600,
-                                              color: statusColor,
-                                            ),
-                                          ),
-                                        ),
-                                        if (fotoUrl != null) ...[
-                                          const SizedBox(height: 4),
-                                          GestureDetector(
-                                            onTap: () =>
-                                                _showFullPhoto(fotoUrl),
-                                            child: ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(8),
-                                              child: Image.network(
-                                                fotoUrl,
-                                                height: 50,
-                                                width: 50,
-                                                fit: BoxFit.cover,
-                                                loadingBuilder:
-                                                    (
-                                                      context,
-                                                      child,
-                                                      loadingProgress,
-                                                    ) {
-                                                      if (loadingProgress ==
-                                                          null)
-                                                        return child;
-                                                      return Container(
-                                                        height: 50,
-                                                        width: 50,
-                                                        color: Colors.grey[200],
-                                                        child: const Center(
-                                                          child:
-                                                              CircularProgressIndicator(
-                                                                strokeWidth: 2,
-                                                              ),
-                                                        ),
-                                                      );
-                                                    },
-                                                errorBuilder:
-                                                    (
-                                                      context,
-                                                      error,
-                                                      stackTrace,
-                                                    ) => Container(
-                                                      height: 50,
-                                                      width: 50,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.grey[200],
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              8,
-                                                            ),
-                                                      ),
-                                                      child: const Icon(
-                                                        Icons
-                                                            .image_not_supported,
-                                                        size: 25,
-                                                        color: Colors.grey,
-                                                      ),
-                                                    ),
+                                    const SizedBox(height: 8),
+                                    const Text(
+                                      'Tarik ke bawah untuk refresh',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  ],
+                                ),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                itemCount: _filteredItems.length,
+                                itemBuilder: (_, i) {
+                                  final item = _filteredItems[i];
+                                  final status = item['status'] ?? 'Waiting';
+                                  final statusColor = status == 'Disetujui'
+                                      ? Colors.green
+                                      : status == 'Ditolak'
+                                      ? Colors.red
+                                      : Colors.orange;
+                                  final jenisColor = _getJenisColor(
+                                    item['jenis'] ?? '',
+                                  );
+                                  final created = DateTime.parse(
+                                    item['created_at'] ??
+                                        DateTime.now().toIso8601String(),
+                                  );
+                                  final formattedDate = DateFormat(
+                                    'dd MMM',
+                                  ).format(created);
+                                  final fotoUrl =
+                                      item['selfie'] != null &&
+                                          item['selfie'].toString().isNotEmpty
+                                      ? '${ApiService.baseUrl}/selfie/${item['selfie']}'
+                                      : null;
+                                  final informasi =
+                                      item['informasi']?.toString() ?? '';
+
+                                  return Card(
+                                    elevation: 6,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(16),
+                                      onTap: () => _showDetailDialog(item),
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(16),
+                                        child: Row(
+                                          children: [
+                                            CircleAvatar(
+                                              radius: 28,
+                                              backgroundColor: jenisColor
+                                                  .withOpacity(0.15),
+                                              child: Icon(
+                                                _getJenisIconData(
+                                                  item['jenis'] ?? '',
+                                                ),
+                                                color: jenisColor,
+                                                size: 28,
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      ],
+                                            const SizedBox(width: 16),
+                                            Expanded(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  Text(
+                                                    '${item['nama_lengkap'] ?? '-'} - ${item['jenis'] ?? '-'}',
+                                                    style: const TextStyle(
+                                                      fontSize: 17,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 6),
+                                                  Text(
+                                                    'Tgl: $formattedDate',
+                                                    style: TextStyle(
+                                                      color:
+                                                          Colors.grey.shade600,
+                                                    ),
+                                                  ),
+                                                  Text(
+                                                    'Ket: ${_shortenText(item['keterangan'] ?? '-')}',
+                                                    style: TextStyle(
+                                                      color:
+                                                          Colors.grey.shade600,
+                                                    ),
+                                                  ),
+                                                  if (informasi.isNotEmpty)
+                                                    Text(
+                                                      'Info: ${_shortenText(informasi)}',
+                                                      style: TextStyle(
+                                                        color: Colors
+                                                            .grey
+                                                            .shade600,
+                                                      ),
+                                                    ),
+                                                ],
+                                              ),
+                                            ),
+                                            Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
+                                              children: [
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 6,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    color: statusColor
+                                                        .withOpacity(0.1),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          20,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: statusColor
+                                                          .withOpacity(0.4),
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    status,
+                                                    style: TextStyle(
+                                                      color: statusColor,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                                if (fotoUrl != null) ...[
+                                                  const SizedBox(height: 8),
+                                                  GestureDetector(
+                                                    onTap: () =>
+                                                        _showFullPhoto(fotoUrl),
+                                                    child: ClipRRect(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                      child: Image.network(
+                                                        fotoUrl,
+                                                        width: 50,
+                                                        height: 50,
+                                                        fit: BoxFit.cover,
+                                                        loadingBuilder:
+                                                            (
+                                                              _,
+                                                              child,
+                                                              progress,
+                                                            ) => progress == null
+                                                            ? child
+                                                            : Container(
+                                                                width: 50,
+                                                                height: 50,
+                                                                color: Colors
+                                                                    .grey[300],
+                                                                child: const Center(
+                                                                  child: CircularProgressIndicator(
+                                                                    strokeWidth:
+                                                                        2,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                        errorBuilder:
+                                                            (
+                                                              _,
+                                                              __,
+                                                              ___,
+                                                            ) => Container(
+                                                              width: 50,
+                                                              height: 50,
+                                                              color: Colors
+                                                                  .grey[300],
+                                                              child: const Icon(
+                                                                Icons
+                                                                    .broken_image,
+                                                                color:
+                                                                    Colors.grey,
+                                                              ),
+                                                            ),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                                const SizedBox(height: 8),
+                                                Icon(
+                                                  status == 'Waiting'
+                                                      ? Icons
+                                                            .arrow_forward_ios_rounded
+                                                      : (status == 'Disetujui'
+                                                            ? Icons.check_circle
+                                                            : Icons.cancel),
+                                                  color: status == 'Waiting'
+                                                      ? Colors.orange
+                                                      : statusColor,
+                                                  size: 28,
+                                                ),
+                                              ],
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     ),
-                                    trailing: status == 'Waiting'
-                                        ? const Icon(
-                                            Icons.arrow_forward_ios_rounded,
-                                            size: 20,
-                                            color: Colors.orange,
-                                          )
-                                        : Icon(
-                                            status == 'Disetujui'
-                                                ? Icons.check_circle
-                                                : Icons.cancel,
-                                            color: statusColor,
-                                            size: 28,
-                                          ),
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-            ),
-          ],
+                                  );
+                                },
+                              ),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );

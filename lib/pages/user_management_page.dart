@@ -1,5 +1,6 @@
-// lib/pages/user_management_page.dart
+// lib/pages/user_management_page.dart (ENHANCED: Modern UI with neumorphic cards, subtle gradients, hero animations, improved search with debounce, role badges, consistent styling for seamless UX)
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../api/api_service.dart';
 
 class UserManagementPage extends StatefulWidget {
@@ -9,24 +10,44 @@ class UserManagementPage extends StatefulWidget {
   State<UserManagementPage> createState() => _UserManagementPageState();
 }
 
-class _UserManagementPageState extends State<UserManagementPage> {
+class _UserManagementPageState extends State<UserManagementPage>
+    with TickerProviderStateMixin {
   bool _loading = true;
   List<dynamic> _users = [];
   List<dynamic> _filteredUsers = [];
   final TextEditingController _searchC = TextEditingController();
+  Timer? _debounce;
+
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
+    _fadeController.forward();
     _loadUsers();
-    _searchC.addListener(_filterUsers);
+    _searchC.addListener(_onSearchChanged);
   }
 
   @override
   void dispose() {
-    _searchC.removeListener(_filterUsers);
+    _debounce?.cancel();
+    _searchC.removeListener(_onSearchChanged);
     _searchC.dispose();
+    _fadeController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), _filterUsers);
   }
 
   Future<void> _loadUsers() async {
@@ -55,8 +76,15 @@ class _UserManagementPageState extends State<UserManagementPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Gagal memuat user: $e'),
-            backgroundColor: Colors.red[600],
+            content: Text(
+              'Gagal memuat user: $e',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -94,6 +122,10 @@ class _UserManagementPageState extends State<UserManagementPage> {
         const SnackBar(
           content: Text('Tidak boleh hapus superadmin'),
           backgroundColor: Color(0xFFF44336),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            // borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       return;
@@ -101,12 +133,17 @@ class _UserManagementPageState extends State<UserManagementPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             const Icon(Icons.delete_forever_rounded, color: Color(0xFFF44336)),
             const SizedBox(width: 8),
-            const Text('Hapus User'),
+            const Flexible(
+              child: Text(
+                'Hapus User',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
           ],
         ),
         content: const Text(
@@ -134,13 +171,24 @@ class _UserManagementPageState extends State<UserManagementPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(res['message'] ?? 'User dihapus'),
-          backgroundColor: Colors.green[600],
+          backgroundColor: const Color(0xFF10B981),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
       _loadUsers();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red[600]),
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: const Color(0xFFEF4444),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
       );
     }
   }
@@ -159,150 +207,230 @@ class _UserManagementPageState extends State<UserManagementPage> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            ),
+          ],
         ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Header
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
+        child: Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Header
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF3B82F6),
+                        const Color(0xFF3B82F6).withOpacity(0.8),
+                      ],
+                    ),
+                    borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20),
+                    ),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.edit_rounded, color: Colors.white, size: 28),
+                      SizedBox(width: 12),
+                      Text(
+                        'Edit User',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.edit_rounded, color: Colors.white, size: 28),
-                    SizedBox(width: 12),
-                    Text(
-                      'Edit User',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                const SizedBox(height: 20),
+
+                TextField(
+                  controller: usernameC,
+                  decoration: InputDecoration(
+                    labelText: 'Username',
+                    prefixIcon: const Icon(
+                      Icons.person,
+                      color: Color(0xFF3B82F6),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                TextField(
+                  controller: namaC,
+                  decoration: InputDecoration(
+                    labelText: 'Nama Lengkap',
+                    prefixIcon: const Icon(
+                      Icons.account_circle,
+                      color: Color(0xFF3B82F6),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                TextField(
+                  controller: nipC,
+                  decoration: InputDecoration(
+                    labelText: 'NIP/NISN (opsional)',
+                    prefixIcon: const Icon(
+                      Icons.badge,
+                      color: Color(0xFF3B82F6),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                DropdownButtonFormField<String>(
+                  value: selectedRole,
+                  decoration: InputDecoration(
+                    labelText: 'Role',
+                    prefixIcon: const Icon(
+                      Icons.shield,
+                      color: Color(0xFF3B82F6),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'user', child: Text('User')),
+                    DropdownMenuItem(value: 'admin', child: Text('Admin')),
+                    DropdownMenuItem(
+                      value: 'superadmin',
+                      child: Text('Super Admin'),
                     ),
                   ],
+                  onChanged: (val) => selectedRole = val,
                 ),
-              ),
-              const SizedBox(height: 20),
+                const SizedBox(height: 16),
 
-              TextField(
-                controller: usernameC,
-                decoration: const InputDecoration(
-                  labelText: 'Username',
-                  prefixIcon: Icon(Icons.person),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              TextField(
-                controller: namaC,
-                decoration: const InputDecoration(
-                  labelText: 'Nama Lengkap',
-                  prefixIcon: Icon(Icons.account_circle),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              TextField(
-                controller: nipC,
-                decoration: const InputDecoration(
-                  labelText: 'NIP/NISN (opsional)',
-                  prefixIcon: Icon(Icons.badge),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              DropdownButtonFormField<String>(
-                value: selectedRole,
-                decoration: const InputDecoration(
-                  labelText: 'Role',
-                  prefixIcon: Icon(Icons.shield),
-                ),
-                items: const [
-                  DropdownMenuItem(value: 'user', child: Text('User')),
-                  DropdownMenuItem(value: 'admin', child: Text('Admin')),
-                  DropdownMenuItem(
-                    value: 'superadmin',
-                    child: Text('Super Admin'),
+                TextField(
+                  controller: passC,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Password Baru (kosongkan jika tidak ganti)',
+                    prefixIcon: const Icon(
+                      Icons.lock,
+                      color: Color(0xFF3B82F6),
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
                   ),
-                ],
-                onChanged: (val) => selectedRole = val,
-              ),
-              const SizedBox(height: 16),
-
-              TextField(
-                controller: passC,
-                obscureText: true,
-                decoration: const InputDecoration(
-                  labelText: 'Password Baru (kosongkan jika tidak ganti)',
-                  prefixIcon: Icon(Icons.lock),
                 ),
-              ),
-              const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  OutlinedButton(
-                    onPressed: () => Navigator.pop(ctx, false),
-                    child: const Text('Batal'),
-                  ),
-                  FilledButton(
-                    onPressed: () async {
-                      try {
-                        final res = await ApiService.updateUser(
-                          id: user['id'].toString(),
-                          username: usernameC.text.trim(),
-                          namaLengkap: namaC.text.trim(),
-                          nipNisn: nipC.text.trim(),
-                          role: selectedRole,
-                          password: passC.text.isEmpty
-                              ? null
-                              : passC.text.trim(),
-                        );
-
-                        if (res['status'] == 'success') {
-                          Navigator.pop(ctx, true);
-                          _loadUsers();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('User berhasil diperbarui'),
-                              backgroundColor: Colors.green,
-                            ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx, false),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Color(0xFF6B7280)),
+                      ),
+                      child: const Text(
+                        'Batal',
+                        style: TextStyle(color: Color(0xFF6B7280)),
+                      ),
+                    ),
+                    FilledButton(
+                      onPressed: () async {
+                        try {
+                          final res = await ApiService.updateUser(
+                            id: user['id'].toString(),
+                            username: usernameC.text.trim(),
+                            namaLengkap: namaC.text.trim(),
+                            nipNisn: nipC.text.trim(),
+                            role: selectedRole,
+                            password: passC.text.isEmpty
+                                ? null
+                                : passC.text.trim(),
                           );
-                        } else {
+
+                          if (res['status'] == 'success') {
+                            Navigator.pop(ctx, true);
+                            _loadUsers();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('User berhasil diperbarui'),
+                                backgroundColor: Color(0xFF10B981),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  // borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(res['message'] ?? 'Gagal'),
+                                backgroundColor: const Color(0xFFEF4444),
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            );
+                          }
+                        } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(res['message'] ?? 'Gagal'),
-                              backgroundColor: Colors.red,
+                              content: Text('Error: $e'),
+                              backgroundColor: const Color(0xFFEF4444),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                           );
                         }
-                      } catch (e) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Error: $e'),
-                            backgroundColor: Colors.red,
-                          ),
-                        );
-                      }
-                    },
-                    child: const Text('Simpan'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-            ],
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: const Color(0xFF3B82F6),
+                      ),
+                      child: const Text('Simpan'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -322,15 +450,18 @@ class _UserManagementPageState extends State<UserManagementPage> {
       appBar: AppBar(
         title: const Text(
           'Kelola User & Admin',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 20),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh_rounded, size: 28),
-            onPressed: _loadUsers,
+          Hero(
+            tag: 'refresh_management',
+            child: IconButton(
+              icon: const Icon(Icons.refresh_rounded, size: 28),
+              onPressed: _loadUsers,
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -338,8 +469,8 @@ class _UserManagementPageState extends State<UserManagementPage> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                cs.primary.withOpacity(0.9),
-                cs.primary.withOpacity(0.6),
+                const Color(0xFF3B82F6).withOpacity(0.9),
+                const Color(0xFF3B82F6).withOpacity(0.6),
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -350,210 +481,415 @@ class _UserManagementPageState extends State<UserManagementPage> {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [cs.primary.withOpacity(0.05), Colors.white],
+            colors: [const Color(0xFF3B82F6).withOpacity(0.05), Colors.white],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
-        child: Column(
-          children: [
-            Padding(
-              padding: EdgeInsets.fromLTRB(
-                16,
-                MediaQuery.of(context).padding.top + 100,
-                16,
-                16,
-              ),
-              child: Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.fromLTRB(
+                  16,
+                  MediaQuery.of(context).padding.top + 100,
+                  16,
+                  16,
                 ),
-                child: Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: TextField(
-                        controller: _searchC,
-                        decoration: InputDecoration(
-                          hintText: 'Cari nama atau username...',
-                          prefixIcon: Icon(
-                            Icons.search_rounded,
-                            color: cs.primary,
-                          ),
-                          suffixIcon: _searchC.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear_rounded),
-                                  onPressed: _searchC.clear,
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          filled: true,
-                          fillColor: Colors.transparent,
-                        ),
-                      ),
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Colors.white, Colors.white.withOpacity(0.95)],
                     ),
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                      child: Text(
-                        'Total: ${_filteredUsers.length}',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 18,
-                        ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 15,
+                        offset: const Offset(0, 6),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Expanded(
-              child: _loading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 4,
-                        color: Colors.blue,
-                      ),
-                    )
-                  : RefreshIndicator(
-                      onRefresh: _loadUsers,
-                      child: _filteredUsers.isEmpty
-                          ? Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.people_outline_rounded,
-                                    size: 80,
-                                    color: Colors.grey[400],
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    _searchC.text.isNotEmpty
-                                        ? 'Tidak ditemukan'
-                                        : 'Belum ada user',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      color: Colors.grey[600],
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                              ),
-                              itemCount: _filteredUsers.length,
-                              itemBuilder: (ctx, i) {
-                                final u = _filteredUsers[i];
-                                final role = (u['role'] ?? 'user')
-                                    .toString()
-                                    .toLowerCase();
-                                final badgeColor = role == 'superadmin'
-                                    ? Colors.red
-                                    : role == 'admin'
-                                    ? Colors.blue
-                                    : Colors.green;
-                                final label = role == 'superadmin'
-                                    ? 'SUPER'
-                                    : role == 'admin'
-                                    ? 'ADMIN'
-                                    : 'USER';
-
-                                return Card(
-                                  elevation: 4,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  margin: const EdgeInsets.symmetric(
-                                    vertical: 8,
-                                  ),
-                                  child: ListTile(
-                                    leading: CircleAvatar(
-                                      backgroundColor: badgeColor.withOpacity(
-                                        0.2,
-                                      ),
-                                      child: Text(
-                                        (u['username'] ?? '?')[0].toUpperCase(),
-                                        style: TextStyle(
-                                          color: badgeColor,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    title: Text(
-                                      u['nama_lengkap'] ?? 'Tanpa Nama',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          u['username'] ?? '',
-                                          style: TextStyle(
-                                            color: Colors.grey[600],
-                                          ),
-                                        ),
-                                        Chip(
-                                          label: Text(label),
-                                          backgroundColor: badgeColor
-                                              .withOpacity(0.2),
-                                          labelStyle: TextStyle(
-                                            color: badgeColor,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    trailing: PopupMenuButton<String>(
-                                      onSelected: (value) {
-                                        if (value == 'edit') {
-                                          _editUser(u);
-                                        } else if (value == 'delete') {
-                                          _deleteUser(u['id'].toString(), role);
-                                        }
-                                      },
-                                      itemBuilder: (context) => [
-                                        const PopupMenuItem(
-                                          value: 'edit',
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.edit_rounded,
-                                                color: Colors.blue,
-                                              ),
-                                              SizedBox(width: 8),
-                                              Text('Edit'),
-                                            ],
-                                          ),
-                                        ),
-                                        PopupMenuItem(
-                                          value: 'delete',
-                                          child: Row(
-                                            children: [
-                                              Icon(
-                                                Icons.delete_rounded,
-                                                color: Colors.red,
-                                              ),
-                                              SizedBox(width: 8),
-                                              Text('Hapus'),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: TextField(
+                          controller: _searchC,
+                          decoration: InputDecoration(
+                            hintText: 'Cari nama atau username...',
+                            prefixIcon: const Icon(
+                              Icons.search_rounded,
+                              color: Color(0xFF3B82F6),
+                              size: 24,
                             ),
-                    ),
-            ),
-          ],
+                            suffixIcon: _searchC.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(
+                                      Icons.clear_rounded,
+                                      color: Color(0xFF3B82F6),
+                                    ),
+                                    onPressed: () => _searchC.clear(),
+                                  )
+                                : null,
+                            border: InputBorder.none,
+                            hintStyle: TextStyle(
+                              color: const Color(0xFF9CA3AF),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF3B82F6).withOpacity(0.05),
+                              Colors.transparent,
+                            ],
+                          ),
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(16),
+                            bottomRight: Radius.circular(16),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Total: ${_filteredUsers.length}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 18,
+                                color: Color(0xFF3B82F6),
+                              ),
+                            ),
+                            Icon(
+                              Icons.people_outline_rounded,
+                              color: const Color(0xFF3B82F6),
+                              size: 24,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Expanded(
+                child: _loading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          strokeWidth: 3,
+                          color: Color(0xFF3B82F6),
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadUsers,
+                        color: const Color(0xFF3B82F6),
+                        child: _filteredUsers.isEmpty
+                            ? Center(
+                                child: Container(
+                                  margin: const EdgeInsets.all(40),
+                                  padding: const EdgeInsets.all(40),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        const Color(
+                                          0xFF3B82F6,
+                                        ).withOpacity(0.05),
+                                        Colors.white,
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: const Color(
+                                        0xFF3B82F6,
+                                      ).withOpacity(0.2),
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        _searchC.text.isNotEmpty
+                                            ? Icons.search_off_rounded
+                                            : Icons.people_outline_rounded,
+                                        size: 80,
+                                        color: const Color(0xFF9CA3AF),
+                                      ),
+                                      const SizedBox(height: 20),
+                                      Text(
+                                        _searchC.text.isNotEmpty
+                                            ? 'Tidak ditemukan user'
+                                            : 'Belum ada user',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w500,
+                                          color: Color(0xFF6B7280),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      if (_searchC.text.isEmpty)
+                                        Text(
+                                          'Tambahkan user baru untuk memulai',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: const Color(0xFF9CA3AF),
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                    ],
+                                  ),
+                                ),
+                              )
+                            : ListView.builder(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                ),
+                                itemCount: _filteredUsers.length,
+                                itemBuilder: (ctx, i) {
+                                  final u = _filteredUsers[i];
+                                  final role = (u['role'] ?? 'user')
+                                      .toString()
+                                      .toLowerCase();
+                                  Color badgeColor;
+                                  String label;
+                                  switch (role) {
+                                    case 'superadmin':
+                                      badgeColor = const Color(0xFFEF4444);
+                                      label = 'SUPER';
+                                      break;
+                                    case 'admin':
+                                      badgeColor = const Color(0xFF3B82F6);
+                                      label = 'ADMIN';
+                                      break;
+                                    default:
+                                      badgeColor = const Color(0xFF10B981);
+                                      label = 'USER';
+                                  }
+
+                                  return Container(
+                                    margin: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      gradient: LinearGradient(
+                                        colors: [
+                                          Colors.white,
+                                          Colors.white.withOpacity(0.95),
+                                        ],
+                                      ),
+                                      borderRadius: BorderRadius.circular(16),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(0.05),
+                                          blurRadius: 15,
+                                          offset: const Offset(0, 6),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Hero(
+                                      tag: 'user_${u['id']}',
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          onTap: () {}, // Optional tap action
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(20),
+                                            child: Row(
+                                              children: [
+                                                Container(
+                                                  width: 60,
+                                                  height: 60,
+                                                  decoration: BoxDecoration(
+                                                    gradient: LinearGradient(
+                                                      colors: [
+                                                        badgeColor.withOpacity(
+                                                          0.1,
+                                                        ),
+                                                        badgeColor.withOpacity(
+                                                          0.05,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                    shape: BoxShape.circle,
+                                                    border: Border.all(
+                                                      color: badgeColor
+                                                          .withOpacity(0.2),
+                                                      width: 1,
+                                                    ),
+                                                  ),
+                                                  child: Center(
+                                                    child: Text(
+                                                      (u['username'] ?? '?')[0]
+                                                          .toUpperCase(),
+                                                      style: TextStyle(
+                                                        fontSize: 24,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        color: badgeColor,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 20),
+                                                Expanded(
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: [
+                                                      Text(
+                                                        u['nama_lengkap'] ??
+                                                            'Tanpa Nama',
+                                                        style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                          fontSize: 18,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 6),
+                                                      Text(
+                                                        'Username: ${u['username'] ?? ''}',
+                                                        style: TextStyle(
+                                                          color: const Color(
+                                                            0xFF6B7280,
+                                                          ),
+                                                          fontSize: 14,
+                                                        ),
+                                                      ),
+                                                      if (u['nip_nisn'] !=
+                                                              null &&
+                                                          u['nip_nisn']
+                                                              .toString()
+                                                              .isNotEmpty)
+                                                        Text(
+                                                          'NIP/NISN: ${u['nip_nisn']}',
+                                                          style: TextStyle(
+                                                            color: const Color(
+                                                              0xFF6B7280,
+                                                            ),
+                                                            fontSize: 14,
+                                                          ),
+                                                        ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                Container(
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 12,
+                                                        vertical: 6,
+                                                      ),
+                                                  decoration: BoxDecoration(
+                                                    gradient: LinearGradient(
+                                                      colors: [
+                                                        badgeColor.withOpacity(
+                                                          0.1,
+                                                        ),
+                                                        Colors.transparent,
+                                                      ],
+                                                    ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          20,
+                                                        ),
+                                                    border: Border.all(
+                                                      color: badgeColor
+                                                          .withOpacity(0.3),
+                                                      width: 1,
+                                                    ),
+                                                  ),
+                                                  child: Text(
+                                                    label,
+                                                    style: TextStyle(
+                                                      color: badgeColor,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontSize: 12,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                PopupMenuButton<String>(
+                                                  onSelected: (value) {
+                                                    if (value == 'edit') {
+                                                      _editUser(u);
+                                                    } else if (value ==
+                                                        'delete') {
+                                                      _deleteUser(
+                                                        u['id'].toString(),
+                                                        role,
+                                                      );
+                                                    }
+                                                  },
+                                                  icon: const Icon(
+                                                    Icons.more_vert_rounded,
+                                                    color: Color(0xFF6B7280),
+                                                  ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                  ),
+                                                  itemBuilder: (context) => [
+                                                    PopupMenuItem(
+                                                      value: 'edit',
+                                                      child: Row(
+                                                        children: [
+                                                          const Icon(
+                                                            Icons.edit_rounded,
+                                                            color: Color(
+                                                              0xFF3B82F6,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                            width: 8,
+                                                          ),
+                                                          const Text('Edit'),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    PopupMenuItem(
+                                                      value: 'delete',
+                                                      child: Row(
+                                                        children: [
+                                                          const Icon(
+                                                            Icons
+                                                                .delete_rounded,
+                                                            color: Color(
+                                                              0xFFEF4444,
+                                                            ),
+                                                          ),
+                                                          const SizedBox(
+                                                            width: 8,
+                                                          ),
+                                                          const Text('Hapus'),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                      ),
+              ),
+            ],
+          ),
         ),
       ),
     );

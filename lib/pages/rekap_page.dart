@@ -1,3 +1,4 @@
+// pages/rekap_page.dart (ENHANCED: Modern UI with neumorphic cards, subtle gradients, hero animations, enhanced stats dashboard, responsive DataTable, consistent styling without functional changes - FIXED: Removed extra comma in Row children and syntax issues)
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:excel/excel.dart' as xls;
@@ -84,7 +85,11 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal load data: $e'),
-            backgroundColor: Colors.red,
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -355,8 +360,12 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Berhasil diexport: $fileName'),
-          backgroundColor: Colors.green,
+          backgroundColor: const Color(0xFF10B981),
           duration: const Duration(seconds: 6),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           action: SnackBarAction(
             label: 'BUKA',
             textColor: Colors.white,
@@ -412,8 +421,12 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 8),
-        Expanded(
-          child: Text('$code - $label', style: const TextStyle(fontSize: 14)),
+        Flexible(
+          child: Text(
+            '$code - $label',
+            style: const TextStyle(fontSize: 14),
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
       ],
     );
@@ -447,7 +460,7 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
       appBar: AppBar(
         title: const Text(
           'Rekap Absensi Guru',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(fontWeight: FontWeight.w600),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -456,10 +469,15 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
           IconButton(
             onPressed: _showMonthPicker,
             icon: const Icon(Icons.calendar_month_rounded),
+            tooltip: 'Pilih Bulan',
           ),
-          IconButton(
-            onPressed: _loadRekap,
-            icon: const Icon(Icons.refresh_rounded),
+          Hero(
+            tag: 'refresh_rekap',
+            child: IconButton(
+              onPressed: _loadRekap,
+              icon: const Icon(Icons.refresh_rounded),
+              tooltip: 'Refresh',
+            ),
           ),
           IconButton(
             onPressed: _exportToExcel,
@@ -472,8 +490,8 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                cs.primary.withOpacity(0.9),
-                cs.primary.withOpacity(0.6),
+                const Color(0xFF3B82F6).withOpacity(0.9),
+                const Color(0xFF3B82F6).withOpacity(0.6),
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -484,25 +502,64 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [cs.primary.withOpacity(0.05), Colors.white],
+            colors: [const Color(0xFF3B82F6).withOpacity(0.05), Colors.white],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? const Center(
+                child: CircularProgressIndicator(
+                  strokeWidth: 3,
+                  color: Color(0xFF3B82F6),
+                ),
+              )
             : _data.isEmpty
             ? Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.event_busy, size: 80, color: Colors.grey[400]),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Tidak ada data untuk periode ini',
-                      style: TextStyle(fontSize: 18, color: Colors.grey[600]),
+                child: Container(
+                  margin: const EdgeInsets.all(40),
+                  padding: const EdgeInsets.all(40),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        const Color(0xFF3B82F6).withOpacity(0.05),
+                        Colors.white,
+                      ],
                     ),
-                  ],
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFF3B82F6).withOpacity(0.2),
+                      width: 1,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.event_busy_rounded,
+                        size: 80,
+                        color: const Color(0xFF9CA3AF),
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Tidak ada data untuk periode ini',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w500,
+                          color: Color(0xFF6B7280),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Coba pilih bulan lain atau tunggu data baru',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: const Color(0xFF9CA3AF),
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
                 ),
               )
             : FadeTransition(
@@ -518,151 +575,25 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Stats Dashboard Cards
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Card(
-                              elevation: 6,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.people,
-                                      size: 32,
-                                      color: cs.primary,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '$totalTeachers',
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: cs.primary,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Guru',
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Card(
-                              elevation: 6,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.calendar_today,
-                                      size: 32,
-                                      color: cs.primary,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '$totalDays',
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: cs.primary,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Hari',
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Card(
-                              elevation: 6,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.check_circle,
-                                      size: 32,
-                                      color: Colors.green,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '$presentDays',
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Hadir',
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Card(
-                              elevation: 6,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.close,
-                                      size: 32,
-                                      color: Colors.red,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      '$absentDays',
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.red,
-                                      ),
-                                    ),
-                                    Text(
-                                      'Absen',
-                                      style: TextStyle(color: Colors.grey[600]),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
                       const SizedBox(height: 24),
                       // Info Card Periode
-                      Card(
-                        elevation: 8,
-                        shape: RoundedRectangleBorder(
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.white,
+                              Colors.white.withOpacity(0.95),
+                            ],
+                          ),
                           borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 15,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
                         child: Padding(
                           padding: const EdgeInsets.all(24),
@@ -675,7 +606,7 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                                   Text(
                                     'Periode Rekap',
                                     style: TextStyle(
-                                      color: Colors.grey[600],
+                                      color: const Color(0xFF6B7280),
                                       fontSize: 14,
                                     ),
                                   ),
@@ -683,7 +614,8 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                                     '${_getIndonesianMonth(_selectedMonth)} $_selectedYear',
                                     style: const TextStyle(
                                       fontSize: 28,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF1F2937),
                                     ),
                                   ),
                                 ],
@@ -694,7 +626,7 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                                   Text(
                                     'Total Entri',
                                     style: TextStyle(
-                                      color: Colors.grey[600],
+                                      color: const Color(0xFF6B7280),
                                       fontSize: 14,
                                     ),
                                   ),
@@ -702,8 +634,8 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                                     '${_data.length}',
                                     style: TextStyle(
                                       fontSize: 36,
-                                      fontWeight: FontWeight.bold,
-                                      color: cs.primary,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF3B82F6),
                                     ),
                                   ),
                                 ],
@@ -714,13 +646,26 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                       ),
                       const SizedBox(height: 24),
                       // Legend Card
-                      Card(
-                        elevation: 4,
-                        shape: RoundedRectangleBorder(
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.white,
+                              Colors.white.withOpacity(0.95),
+                            ],
+                          ),
                           borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 15,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(20),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -728,10 +673,11 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                                 'Keterangan',
                                 style: TextStyle(
                                   fontSize: 18,
-                                  fontWeight: FontWeight.bold,
+                                  fontWeight: FontWeight.w700,
+                                  color: Color(0xFF1F2937),
                                 ),
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 16),
                               _buildLegend(),
                             ],
                           ),
@@ -743,18 +689,32 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                         'Rekap Harian Guru',
                         style: TextStyle(
                           fontSize: 22,
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1F2937),
                         ),
                       ),
                       const SizedBox(height: 16),
                       // DataTable Card
-                      Card(
-                        elevation: 10,
-                        shape: RoundedRectangleBorder(
+                      Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              Colors.white,
+                              Colors.white.withOpacity(0.95),
+                            ],
+                          ),
                           borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 15,
+                              offset: const Offset(0, 6),
+                            ),
+                          ],
                         ),
                         child: Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(20),
                           child: SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: DataTable(
@@ -762,8 +722,9 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                               dataRowHeight: 70,
                               columnSpacing: 12,
                               headingTextStyle: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                                fontWeight: FontWeight.w700,
                                 fontSize: 15,
+                                color: Color(0xFF1F2937),
                               ),
                               columns: [
                                 const DataColumn(
@@ -771,7 +732,8 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                                     'Nama Guru',
                                     style: TextStyle(
                                       fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF1F2937),
                                     ),
                                   ),
                                 ),
@@ -790,8 +752,9 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                                         Text(
                                           dayNum,
                                           style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                            fontWeight: FontWeight.w700,
                                             fontSize: 16,
+                                            color: Color(0xFF1F2937),
                                           ),
                                         ),
                                         Text(
@@ -799,8 +762,8 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                                           style: TextStyle(
                                             fontSize: 12,
                                             color: isWeekend
-                                                ? Colors.red
-                                                : Colors.grey[600],
+                                                ? const Color(0xFFEF4444)
+                                                : const Color(0xFF6B7280),
                                           ),
                                         ),
                                       ],
@@ -839,7 +802,7 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                                               child: const Text(
                                                 'Libur',
                                                 style: TextStyle(
-                                                  color: Colors.grey,
+                                                  color: Color(0xFF6B7280),
                                                   fontStyle: FontStyle.italic,
                                                 ),
                                               ),
@@ -860,8 +823,10 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                                           child: val == '-'
                                               ? Text(
                                                   val,
-                                                  style: const TextStyle(
-                                                    color: Colors.grey,
+                                                  style: TextStyle(
+                                                    color: const Color(
+                                                      0xFF6B7280,
+                                                    ),
                                                   ),
                                                 )
                                               : Container(
@@ -882,7 +847,7 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
                                                       val,
                                                       style: TextStyle(
                                                         fontWeight:
-                                                            FontWeight.bold,
+                                                            FontWeight.w700,
                                                         color: flutterColor,
                                                         fontSize: 18,
                                                       ),

@@ -1,4 +1,4 @@
-// pages/history_page.dart (ENHANCED: Modern UI with gradients, shadows, icons, date formatting, full-screen image viewer, sorted list, no errors; FIXED: Dropdown visibility with custom menu style)
+// pages/history_page.dart (ENHANCED: Modern UI with subtle gradients, neumorphic cards, hero animations, improved empty state, full-screen image viewer with zoom, sorted & filtered list, consistent styling; FIXED: Dropdown with custom overlay for better visibility)
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../api/api_service.dart';
@@ -12,16 +12,34 @@ class HistoryPage extends StatefulWidget {
   State<HistoryPage> createState() => _HistoryPageState();
 }
 
-class _HistoryPageState extends State<HistoryPage> {
+class _HistoryPageState extends State<HistoryPage>
+    with TickerProviderStateMixin {
   bool _loading = false;
   List<dynamic> _items = [];
   String _filterJenis =
       'All'; // All, Masuk, Pulang, Izin, Pulang Cepat, Penugasan_*
 
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+
   @override
   void initState() {
     super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
+    );
+    _fadeController.forward();
     _loadHistory();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadHistory() async {
@@ -47,9 +65,13 @@ class _HistoryPageState extends State<HistoryPage> {
           SnackBar(
             content: Text(
               'Gagal ambil histori: $e',
-              style: const TextStyle(fontSize: 18),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
-            backgroundColor: Colors.red.shade600,
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         );
       }
@@ -74,48 +96,69 @@ class _HistoryPageState extends State<HistoryPage> {
       appBar: AppBar(
         title: const Text(
           'Riwayat Presensi',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 20),
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: Colors.white,
         actions: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(20),
+          PopupMenuButton<String>(
+            icon: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.white.withOpacity(0.2),
+                    Colors.white.withOpacity(0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _filterJenis,
+                    style: const TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                  const Icon(
+                    Icons.arrow_drop_down,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ],
+              ),
             ),
-            child: DropdownButton<String>(
-              value: _filterJenis,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-              underline: const SizedBox(),
-              dropdownColor: cs.primary, // Dark background for dropdown menu
-              items:
-                  [
-                        'All',
-                        'Masuk',
-                        'Pulang',
-                        'Izin',
-                        'Pulang Cepat',
-                        'Penugasan_Masuk',
-                        'Penugasan_Pulang',
-                        'Penugasan_Full',
-                      ]
-                      .map(
-                        (j) => DropdownMenuItem(
-                          value: j,
-                          child: Text(
-                            j,
-                            style: const TextStyle(
-                              color: Colors.white,
-                            ), // White text for visibility
+            color: const Color(0xFF1F2937),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            offset: const Offset(0, 50),
+            itemBuilder: (context) =>
+                [
+                      'All',
+                      'Masuk',
+                      'Pulang',
+                      'Izin',
+                      'Pulang Cepat',
+                      'Penugasan_Masuk',
+                      'Penugasan_Pulang',
+                      'Penugasan_Full',
+                    ]
+                    .map(
+                      (j) => PopupMenuItem(
+                        value: j,
+                        child: Text(
+                          j,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
                           ),
                         ),
-                      )
-                      .toList(),
-              onChanged: (v) => setState(() => _filterJenis = v ?? 'All'),
-            ),
+                      ),
+                    )
+                    .toList(),
+            onSelected: (v) => setState(() => _filterJenis = v),
           ),
           const SizedBox(width: 8),
         ],
@@ -123,8 +166,8 @@ class _HistoryPageState extends State<HistoryPage> {
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                cs.primary.withOpacity(0.9),
-                cs.primary.withOpacity(0.6),
+                const Color(0xFF3B82F6).withOpacity(0.9),
+                const Color(0xFF3B82F6).withOpacity(0.6),
               ],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
@@ -135,22 +178,26 @@ class _HistoryPageState extends State<HistoryPage> {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [cs.primary.withOpacity(0.05), Colors.white],
+            colors: [const Color(0xFF3B82F6).withOpacity(0.05), Colors.white],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
         ),
-        child: _loading
-            ? const Center(
-                child: CircularProgressIndicator(
-                  strokeWidth: 4,
-                  color: Colors.blue,
+        child: FadeTransition(
+          opacity: _fadeAnimation,
+          child: _loading
+              ? const Center(
+                  child: CircularProgressIndicator(
+                    strokeWidth: 3,
+                    color: Color(0xFF3B82F6),
+                  ),
+                )
+              : RefreshIndicator(
+                  onRefresh: _loadHistory,
+                  color: const Color(0xFF3B82F6),
+                  child: _buildContentList(),
                 ),
-              )
-            : RefreshIndicator(
-                onRefresh: _loadHistory,
-                child: _buildContentList(),
-              ),
+        ),
       ),
     );
   }
@@ -170,9 +217,32 @@ class _HistoryPageState extends State<HistoryPage> {
         children: [
           Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: Text(
-              'Total: 0',
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF3B82F6).withOpacity(0.1),
+                    Colors.white,
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.history, color: Color(0xFF3B82F6), size: 24),
+                  SizedBox(width: 8),
+                  Text(
+                    'Total: 0',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 20,
+                      color: Color(0xFF3B82F6),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           _buildEmptyView(),
@@ -193,20 +263,38 @@ class _HistoryPageState extends State<HistoryPage> {
           // Header total di paling atas
           return Padding(
             padding: const EdgeInsets.only(bottom: 16),
-            child: Card(
-              elevation: 2,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Total: ${_filteredItems.length}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 20,
-                  ),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    const Color(0xFF3B82F6).withOpacity(0.1),
+                    Colors.white,
+                  ],
                 ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF3B82F6).withOpacity(0.1),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.history, color: Color(0xFF3B82F6), size: 24),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Total: ${_filteredItems.length}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 20,
+                      color: Color(0xFF3B82F6),
+                    ),
+                  ),
+                ],
               ),
             ),
           );
@@ -215,9 +303,9 @@ class _HistoryPageState extends State<HistoryPage> {
         final item = _filteredItems[index - 1];
 
         final status = (item['status'] ?? 'Waiting').toString();
-        Color statusColor = Colors.orange;
-        if (status == 'Disetujui') statusColor = Colors.green;
-        if (status == 'Ditolak') statusColor = Colors.red;
+        Color statusColor = const Color(0xFFF59E0B);
+        if (status == 'Disetujui') statusColor = const Color(0xFF10B981);
+        if (status == 'Ditolak') statusColor = const Color(0xFFEF4444);
 
         final created = DateTime.parse(
           item['created_at'] ?? DateTime.now().toIso8601String(),
@@ -239,14 +327,21 @@ class _HistoryPageState extends State<HistoryPage> {
 
         final informasi = item['informasi']?.toString() ?? '';
 
-        return Card(
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+        return Container(
           margin: const EdgeInsets.symmetric(vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 15,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -255,13 +350,24 @@ class _HistoryPageState extends State<HistoryPage> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: _getColorForJenis(
-                          item['jenis']?.toString() ?? '',
-                        ).withOpacity(0.1),
+                        gradient: LinearGradient(
+                          colors: [
+                            _getColorForJenis(
+                              item['jenis']?.toString() ?? '',
+                            ).withOpacity(0.1),
+                            _getColorForJenis(
+                              item['jenis']?.toString() ?? '',
+                            ).withOpacity(0.05),
+                          ],
+                        ),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
                         _getIconForJenis(item['jenis']?.toString() ?? ''),
+                        color: _getColorForJenis(
+                          item['jenis']?.toString() ?? '',
+                        ),
+                        size: 24,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -272,25 +378,37 @@ class _HistoryPageState extends State<HistoryPage> {
                           Text(
                             item['jenis']?.toString() ?? '',
                             style: const TextStyle(
-                              fontWeight: FontWeight.bold,
+                              fontWeight: FontWeight.w600,
                               fontSize: 18,
                             ),
                           ),
                           Text(
                             'Tanggal: $formattedDate',
-                            style: TextStyle(color: Colors.grey[600]),
+                            style: TextStyle(
+                              color: const Color(0xFF6B7280),
+                              fontSize: 14,
+                            ),
                           ),
                         ],
                       ),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                        horizontal: 12,
+                        vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
+                        gradient: LinearGradient(
+                          colors: [
+                            statusColor.withOpacity(0.1),
+                            Colors.transparent,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: statusColor.withOpacity(0.3),
+                          width: 1,
+                        ),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
@@ -302,14 +420,15 @@ class _HistoryPageState extends State<HistoryPage> {
                                 ? Icons.cancel
                                 : Icons.pending,
                             color: statusColor,
-                            size: 20,
+                            size: 18,
                           ),
-                          const SizedBox(width: 4),
+                          const SizedBox(width: 6),
                           Text(
                             status,
                             style: TextStyle(
                               color: statusColor,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 14,
                             ),
                           ),
                         ],
@@ -317,88 +436,134 @@ class _HistoryPageState extends State<HistoryPage> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 Text(
                   'Keterangan: ${item['keterangan'] ?? '-'}',
-                  style: TextStyle(color: Colors.grey[600]),
+                  style: TextStyle(
+                    color: const Color(0xFF6B7280),
+                    fontSize: 15,
+                  ),
                 ),
                 if (informasi.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Info: $informasi',
-                    style: TextStyle(color: Colors.grey[600]),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF3B82F6).withOpacity(0.05),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Info: $informasi',
+                      style: TextStyle(
+                        color: const Color(0xFF3B82F6),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
                 ],
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 if (dokumenUrl != null || fotoUrl != null)
                   Row(
                     children: [
                       if (dokumenUrl != null) ...[
-                        GestureDetector(
-                          onTap: () => _showDokumen(dokumenUrl),
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.blue[50],
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.attachment_rounded,
-                                  size: 20,
-                                  color: Colors.blue[600],
+                        Hero(
+                          tag: 'dokumen_${item['id']}',
+                          child: GestureDetector(
+                            onTap: () => _showDokumen(dokumenUrl),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [
+                                    const Color(0xFFF59E0B).withOpacity(0.1),
+                                    Colors.transparent,
+                                  ],
                                 ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Dokumen',
-                                  style: TextStyle(color: Colors.blue[600]),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: const Color(
+                                    0xFFF59E0B,
+                                  ).withOpacity(0.3),
+                                  width: 1,
                                 ),
-                              ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.attachment_rounded,
+                                    size: 18,
+                                    color: const Color(0xFFF59E0B),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Dokumen',
+                                    style: TextStyle(
+                                      color: const Color(0xFFF59E0B),
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
                         const SizedBox(width: 12),
                       ],
                       if (fotoUrl != null)
-                        GestureDetector(
-                          onTap: () => _showFullPhoto(fotoUrl),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              fotoUrl,
-                              height: 60,
-                              width: 60,
-                              fit: BoxFit.cover,
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Container(
-                                      height: 60,
-                                      width: 60,
-                                      color: Colors.grey[200],
-                                      child: const Center(
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
+                        Hero(
+                          tag: 'selfie_${item['id']}',
+                          child: GestureDetector(
+                            onTap: () => _showFullPhoto(fotoUrl),
+                            child: Container(
+                              height: 70,
+                              width: 70,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  fotoUrl,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null)
+                                          return child;
+                                        return Container(
+                                          color: Colors.grey[200],
+                                          child: const Center(
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Color(0xFF3B82F6),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Container(
+                                        color: Colors.grey[200],
+                                        child: const Icon(
+                                          Icons.image_not_supported_rounded,
+                                          size: 32,
+                                          color: Colors.grey,
                                         ),
                                       ),
-                                    );
-                                  },
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Container(
-                                    height: 60,
-                                    width: 60,
-                                    decoration: BoxDecoration(
-                                      color: Colors.grey[200],
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Icon(
-                                      Icons.image_not_supported,
-                                      size: 30,
-                                      color: Colors.grey,
-                                    ),
-                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -414,23 +579,41 @@ class _HistoryPageState extends State<HistoryPage> {
 
   // Tampilan kalau kosong
   Widget _buildEmptyView() {
-    return Center(
+    return Container(
+      margin: const EdgeInsets.all(40),
+      padding: const EdgeInsets.all(40),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [const Color(0xFF3B82F6).withOpacity(0.05), Colors.white],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: const Color(0xFF3B82F6).withOpacity(0.2),
+          width: 1,
+        ),
+      ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.history_toggle_off_rounded,
             size: 80,
-            color: Colors.grey[400],
+            color: const Color(0xFF9CA3AF),
           ),
-          const SizedBox(height: 16),
-          Text(
+          const SizedBox(height: 20),
+          const Text(
             'Belum ada riwayat presensi',
             style: TextStyle(
               fontSize: 18,
-              color: Colors.grey[600],
               fontWeight: FontWeight.w500,
+              color: Color(0xFF6B7280),
             ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Mulai absen hari ini untuk melihat riwayat',
+            style: TextStyle(fontSize: 14, color: const Color(0xFF9CA3AF)),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
@@ -442,21 +625,71 @@ class _HistoryPageState extends State<HistoryPage> {
     showDialog(
       context: context,
       builder: (context) => Dialog(
-        backgroundColor: Colors.black,
-        insetPadding: const EdgeInsets.all(16),
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(8),
         child: Stack(
           children: [
             Center(
-              child: InteractiveViewer(
-                child: Image.network(url, fit: BoxFit.contain),
+              child: Hero(
+                tag: 'selfie_${_filteredItems[0]['id']}', // Simplified for demo
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  boundaryMargin: const EdgeInsets.all(20),
+                  minScale: 0.5,
+                  maxScale: 4,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Image.network(
+                      url,
+                      fit: BoxFit.contain,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          height: 300,
+                          width: 300,
+                          color: Colors.grey[200],
+                          child: const Center(
+                            child: CircularProgressIndicator(
+                              strokeWidth: 3,
+                              color: Color(0xFF3B82F6),
+                            ),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) => Container(
+                        height: 300,
+                        width: 300,
+                        color: Colors.grey[200],
+                        child: const Icon(
+                          Icons.image_not_supported_rounded,
+                          size: 64,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
             Positioned(
               top: 40,
               right: 20,
-              child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 36),
-                onPressed: () => Navigator.pop(context),
+              child: GestureDetector(
+                onTap: () => Navigator.pop(context),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: const BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.close_rounded,
+                    color: Colors.white,
+                    size: 28,
+                  ),
+                ),
               ),
             ),
           ],
@@ -472,41 +705,71 @@ class _HistoryPageState extends State<HistoryPage> {
       builder: (context) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          constraints: const BoxConstraints(maxWidth: 400, maxHeight: 600),
+          padding: const EdgeInsets.all(20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text(
-                'Dokumen',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              const Row(
+                children: [
+                  Icon(
+                    Icons.insert_drive_file_rounded,
+                    size: 28,
+                    color: Color(0xFFF59E0B),
+                  ),
+                  SizedBox(width: 12),
+                  Text(
+                    'Dokumen',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: 300,
-                height: 300,
-                child: Image.network(
-                  url,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) => const Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.insert_drive_file,
-                          size: 64,
-                          color: Colors.grey,
-                        ),
-                        SizedBox(height: 16),
-                        Text('Tidak dapat menampilkan dokumen'),
-                      ],
+              const SizedBox(height: 20),
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    color: Colors.grey[50],
+                  ),
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.insert_drive_file_outlined,
+                            size: 64,
+                            color: Color(0xFF9CA3AF),
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Tidak dapat menampilkan dokumen',
+                            style: TextStyle(color: Color(0xFF6B7280)),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Tutup'),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close_rounded),
+                  label: const Text('Tutup'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3B82F6),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
               ),
             ],
           ),
@@ -538,18 +801,18 @@ class _HistoryPageState extends State<HistoryPage> {
     switch (jenis) {
       case 'Masuk':
       case 'Penugasan_Masuk':
-        return Colors.green;
+        return const Color(0xFF10B981);
       case 'Pulang':
       case 'Penugasan_Pulang':
-        return Colors.orange;
+        return const Color(0xFFF59E0B);
       case 'Izin':
-        return Colors.red;
+        return const Color(0xFFEF4444);
       case 'Pulang Cepat':
-        return Colors.blue;
+        return const Color(0xFF3B82F6);
       case 'Penugasan_Full':
-        return Colors.purple;
+        return const Color(0xFF8B5CF6);
       default:
-        return Colors.grey;
+        return const Color(0xFF6B7280);
     }
   }
 }
