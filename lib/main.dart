@@ -5,7 +5,7 @@ import 'pages/register_page.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/user_management_page.dart';
 import 'pages/presensi_page.dart';
-// import 'pages/history_page.dart';
+import 'pages/history_page.dart';
 import 'pages/admin_presensi_page.dart';
 import 'pages/admin_user_list_page.dart';
 import 'pages/admin_user_detail_page.dart';
@@ -99,10 +99,10 @@ class _SkadutaAppState extends State<SkadutaApp> {
                 PresensiPage(user: args['user'], initialJenis: args['jenis']),
           );
         }
-        // if (settings.name == '/history') {
-        //   final user = settings.arguments as UserModel;
-        //   return MaterialPageRoute(builder: (_) => HistoryPage(user: user));
-        // }
+        if (settings.name == '/history') {
+          final user = settings.arguments as UserModel;
+          return MaterialPageRoute(builder: (_) => HistoryPage(user: user));
+        }
         if (settings.name == '/admin-user-list') {
           return MaterialPageRoute(builder: (_) => const AdminUserListPage());
         }

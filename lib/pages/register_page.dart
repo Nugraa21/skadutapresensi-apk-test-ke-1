@@ -505,7 +505,7 @@ class _RegisterPageState extends State<RegisterPage>
                             ),
                             const SizedBox(height: 12),
                             const Text(
-                              'Tips Registrasi:\n• Gunakan username unik\n• Password minimal 4 karakter\n• Pilih role sesuai jabatan',
+                              'Tips Registrasi:\n• Gunakan username unik\n• Password minimal 4 karakter',
                               style: TextStyle(
                                 color: Color(0xFF1F2937),
                                 fontSize: 14,

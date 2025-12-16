@@ -303,7 +303,7 @@ class _AdminUserListPageState extends State<AdminUserListPage>
                                             ? 'Tidak ditemukan user'
                                             : 'Belum ada user',
                                         style: const TextStyle(
-                                          fontSize: 18,
+                                          // fontSize: 18,
                                           fontWeight: FontWeight.w500,
                                           color: Color(0xFF6B7280),
                                         ),

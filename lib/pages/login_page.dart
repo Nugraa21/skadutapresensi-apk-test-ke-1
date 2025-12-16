@@ -215,7 +215,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     child: TextFormField(
                                       controller: _inputC,
                                       decoration: InputDecoration(
-                                        labelText: 'Username / NIP / NIK',
+                                        labelText: 'Username',
                                         labelStyle: TextStyle(
                                           color: const Color(0xFF6B7280),
                                         ),
@@ -382,7 +382,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               ),
                               const SizedBox(height: 12),
                               const Text(
-                                'Tips Login:\n• Gunakan Username, NIP, atau NIK\n• Pastikan koneksi internet stabil',
+                                'Tips Login:\n• Gunakan Username\n• Pastikan koneksi internet stabil',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
