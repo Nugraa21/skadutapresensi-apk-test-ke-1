@@ -1,11 +1,66 @@
-// pages/dashboard_page.dart (UPDATED: Added Rekap menu for admin/superadmin; simplified UI, larger buttons/text for older users; enhanced with gradient bg, better padding, rounded cards, consistent styling)
+// pages/dashboard_page.dart (UPDATED: Auto-fetch location on open; simplified UI, larger buttons/text for older users; enhanced with gradient bg, better padding, rounded cards, consistent styling)
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../models/user_model.dart';
 import '../api/api_service.dart';
 
-class DashboardPage extends StatelessWidget {
+class DashboardPage extends StatefulWidget {
   final UserModel user;
   const DashboardPage({super.key, required this.user});
+
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  String _currentLocation = 'Sedang memuat lokasi...';
+
+  @override
+  void initState() {
+    super.initState();
+    _getCurrentLocation();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      setState(() => _currentLocation = 'Lokasi GPS mati. Nyalain dulu ya!');
+      return;
+    }
+
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        setState(
+          () => _currentLocation = 'Izin lokasi ditolak. Buka pengaturan app.',
+        );
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      setState(
+        () =>
+            _currentLocation = 'Izin lokasi ditolak permanen. Buka pengaturan.',
+      );
+      return;
+    }
+
+    try {
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
+      );
+      setState(() {
+        _currentLocation =
+            'Lat: ${position.latitude.toStringAsFixed(4)}, Long: ${position.longitude.toStringAsFixed(4)}';
+      });
+    } catch (e) {
+      setState(() => _currentLocation = 'Gagal baca lokasi: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -25,7 +80,7 @@ class DashboardPage extends StatelessWidget {
               padding: const EdgeInsets.only(right: 8.0),
               child: Chip(
                 label: Text(
-                  user.role.toUpperCase(),
+                  widget.user.role.toUpperCase(),
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -85,7 +140,7 @@ class DashboardPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Halo, ${user.namaLengkap}',
+                      'Halo, ${widget.user.namaLengkap}',
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
@@ -96,6 +151,40 @@ class DashboardPage extends StatelessWidget {
                     Text(
                       'Selamat datang di sistem presensi Skaduta',
                       style: TextStyle(color: Colors.grey[600], fontSize: 18),
+                    ),
+                    const SizedBox(height: 10),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.location_on_rounded,
+                            color: Colors.blue,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _currentLocation,
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ),
+                          if (_currentLocation.contains('memuat') ||
+                              _currentLocation.contains('Gagal'))
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: 30),
                   ],
@@ -108,9 +197,10 @@ class DashboardPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (user.role == 'user') _buildUserSection(context),
-                    if (user.role == 'admin') _buildAdminSection(context),
-                    if (user.role == 'superadmin')
+                    if (widget.user.role == 'user') _buildUserSection(context),
+                    if (widget.user.role == 'admin')
+                      _buildAdminSection(context),
+                    if (widget.user.role == 'superadmin')
                       _buildSuperAdminSection(context),
                     const SizedBox(height: 20),
                   ],
@@ -188,7 +278,6 @@ class DashboardPage extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // UPDATED: 4 biasa buttons + 1 Penugasan
         _card(
           icon: Icons.login_rounded,
           title: 'Absen Masuk Biasa',
@@ -221,7 +310,7 @@ class DashboardPage extends StatelessWidget {
           icon: Icons.assignment_rounded,
           title: 'Penugasan',
           subtitle: 'Ajukan penugasan khusus (perlu persetujuan admin)',
-          onTap: () => _showPenugasanSheet(context), // NEW: Show sub-options
+          onTap: () => _showPenugasanSheet(context),
           color: Colors.purple,
         ),
         _card(
@@ -229,7 +318,7 @@ class DashboardPage extends StatelessWidget {
           title: 'Riwayat Presensi',
           subtitle: 'Lihat riwayat presensi kamu',
           onTap: () {
-            Navigator.pushNamed(context, '/history', arguments: user);
+            Navigator.pushNamed(context, '/history', arguments: widget.user);
           },
           color: Colors.indigo,
         ),
@@ -237,16 +326,14 @@ class DashboardPage extends StatelessWidget {
     );
   }
 
-  // NEW: Navigate helper
   void _navigateToPresensi(BuildContext context, String jenis) {
     Navigator.pushNamed(
       context,
       '/presensi',
-      arguments: {'user': user, 'jenis': jenis},
+      arguments: {'user': widget.user, 'jenis': jenis},
     );
   }
 
-  // NEW: Bottom sheet for Penugasan sub-options
   void _showPenugasanSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
