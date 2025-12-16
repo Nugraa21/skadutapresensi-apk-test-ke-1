@@ -235,7 +235,7 @@ class ApiService {
     required String nipNisn,
     required String password,
     required String role,
-    required bool isKaryawan,
+    required String status, // <--- BARU: status pegawai
   }) async {
     final deviceId = await getDeviceId();
 
@@ -250,7 +250,7 @@ class ApiService {
           "nip_nisn": nipNisn,
           "password": password,
           "role": role,
-          "is_karyawan": isKaryawan,
+          "status": status, // <--- KIRIM STATUS
           "device_id": deviceId,
         }),
       ),
