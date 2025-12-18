@@ -1,3 +1,6 @@
 {
-    "cmake.sourceDirectory": "D:/TUGAS AKHIR FIX/presensi/skadutapresensi/linux"
+    "cmake.sourceDirectory": "D:/TUGAS AKHIR FIX/presensi/skadutapresensi/windows",
+    "workbench.colorCustomizations": {
+        "terminal.background": "#00000000"
+    }
 }
