@@ -16,7 +16,7 @@ pembukaan absen pulang minimal jam 01:00
 untuk pulang cepat tidak menghiraukan jam ( konfirmasi di setujui / tidak )
 untuk izin 
 penugasan pulang / masuk jam nya tidak perlu soalnya jam nya ada di dalam informasi surat tugasnya , sana yabg penugasan full 
-
+ 
  -->    
 # Studi Kasus Sistem Absensi
 
