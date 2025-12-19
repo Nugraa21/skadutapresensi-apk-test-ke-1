@@ -57,7 +57,7 @@ penugasan pulang / masuk jam nya tidak perlu soalnya jam nya ada di dalam inform
 ```sql
 DROP TABLE IF EXISTS absensi;
 DROP TABLE IF EXISTS users;
-DROP TABLE IF EXISTS login_tokens;
+DROP TABLE IF EXISTS login_tokens;    
 
 CREATE TABLE users (
   id INT(11) NOT NULL AUTO_INCREMENT,
@@ -182,7 +182,7 @@ CREATE TABLE absensi (
   selfie VARCHAR(255),  -- Path to selfie photo (opsional, untuk verifikasi)
   latitude DECIMAL(10, 8),  -- Latitude lokasi (presisi lebih baik daripada VARCHAR)
   longitude DECIMAL(11, 8), -- Longitude lokasi (presisi lebih baik daripada VARCHAR)
-  status ENUM('Pending','Disetujui','Ditolak') DEFAULT 'Pending',
+  status ENUM('Pending','Disetujui','Ditolak') DEFAULT 'Waiting',
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
   INDEX idx_user_date (user_id, tanggal),  -- Index untuk rekap cepat per user dan tanggal/bulan
