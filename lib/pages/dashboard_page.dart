@@ -1,4 +1,4 @@
-// pages/dashboard_page.dart (UPDATED: Enhanced UI – Hero animations, neumorphic cards, larger touch targets, subtle gradients, and role-based hero icons for modern yet accessible design)
+// lib/pages/dashboard_page.dart - DIPERBARUI: Tambah Menu Profile di AppBar + Tombol Ubah Password di halaman Profile (tampilan super keren & responsif)
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/user_model.dart';
@@ -78,6 +78,13 @@ class _DashboardPageState extends State<DashboardPage>
     }
   }
 
+  // ================== HALAMAN PROFILE + UBAH PASSWORD ==================
+  void _openProfile() {
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => ProfilePage(user: widget.user)));
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -92,22 +99,18 @@ class _DashboardPageState extends State<DashboardPage>
         elevation: 0,
         foregroundColor: Colors.white,
         actions: [
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.only(right: 8.0),
-              child: Chip(
-                label: Text(
-                  widget.user.role.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                backgroundColor: cs.primary.withOpacity(0.15),
-                side: BorderSide(color: cs.primary, width: 1.5),
-                avatar: Icon(Icons.shield, size: 16, color: cs.primary),
+          // TOMBOL PROFILE DI APPBAR (ICON PERSON)
+          IconButton(
+            icon: Hero(
+              tag: 'avatar_${widget.user.id}',
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: Colors.white.withOpacity(0.2),
+                child: Icon(Icons.person, color: Colors.white, size: 20),
               ),
             ),
+            onPressed: _openProfile,
+            tooltip: 'Profile',
           ),
           Hero(
             tag: 'logout',
@@ -166,11 +169,11 @@ class _DashboardPageState extends State<DashboardPage>
                           Hero(
                             tag: 'avatar_${widget.user.id}',
                             child: CircleAvatar(
-                              radius: 30,
+                              radius: 36,
                               backgroundColor: cs.primary.withOpacity(0.1),
                               child: Icon(
                                 Icons.person,
-                                size: 30,
+                                size: 40,
                                 color: cs.primary,
                               ),
                             ),
@@ -188,7 +191,7 @@ class _DashboardPageState extends State<DashboardPage>
                                   ),
                                 ),
                                 Text(
-                                  'Selamat datang di sistem presensi Skaduta',
+                                  'Role: ${widget.user.role.toUpperCase()}',
                                   style: TextStyle(
                                     color: const Color(0xFF6B7280),
                                     fontSize: 16,
@@ -645,6 +648,365 @@ class _DashboardPageState extends State<DashboardPage>
             Navigator.pushNamed(context, '/rekap');
           },
           color: const Color(0xFF6366F1),
+        ),
+      ],
+    );
+  }
+}
+
+// ================== HALAMAN PROFILE BARU (SUPER KEREN & RESPONSIF) ==================
+class ProfilePage extends StatefulWidget {
+  final UserModel user;
+  const ProfilePage({super.key, required this.user});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  bool isLoading = false;
+
+  Future<void> _ubahPassword() async {
+    final oldPassC = TextEditingController();
+    final newPassC = TextEditingController();
+    final confirmPassC = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setStateDialog) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(24),
+          ),
+          backgroundColor: Colors.white,
+          elevation: 20,
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                  ),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.lock_reset_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              const Text(
+                'Ubah Password',
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: oldPassC,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Password Lama',
+                    prefixIcon: const Icon(Icons.lock_outline),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: newPassC,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Password Baru',
+                    prefixIcon: const Icon(Icons.lock),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: confirmPassC,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Konfirmasi Password',
+                    prefixIcon: const Icon(Icons.lock),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    filled: true,
+                    fillColor: Colors.grey[50],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              onPressed: isLoading
+                  ? null
+                  : () async {
+                      if (oldPassC.text.isEmpty ||
+                          newPassC.text.isEmpty ||
+                          confirmPassC.text.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Semua field wajib diisi'),
+                          ),
+                        );
+                        return;
+                      }
+                      if (newPassC.text != confirmPassC.text) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Password baru tidak cocok'),
+                          ),
+                        );
+                        return;
+                      }
+                      if (newPassC.text.length < 6) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Password minimal 6 karakter'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      setStateDialog(() => isLoading = true);
+
+                      try {
+                        final loginRes = await ApiService.login(
+                          input:
+                              widget.user.username ?? widget.user.namaLengkap,
+                          password: oldPassC.text,
+                        );
+
+                        if (loginRes['status'] != true) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Password lama salah'),
+                            ),
+                          );
+                          return;
+                        }
+
+                        final updateRes = await ApiService.updateUser(
+                          id: widget.user.id,
+                          username: '',
+                          namaLengkap: '',
+                          nipNisn: '',
+                          role: null,
+                          password: newPassC.text,
+                        );
+
+                        if (updateRes['status'] == 'success' ||
+                            updateRes['status'] == true) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Password berhasil diubah!'),
+                              backgroundColor: Color(0xFF10B981),
+                            ),
+                          );
+                          await ApiService.logout();
+                          Navigator.pushNamedAndRemoveUntil(
+                            context,
+                            '/login',
+                            (route) => false,
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                updateRes['message'] ?? 'Gagal ubah password',
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(
+                          context,
+                        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+                      } finally {
+                        if (mounted) setStateDialog(() => isLoading = false);
+                      }
+                    },
+              child: isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(color: Colors.white),
+                    )
+                  : const Text('Simpan'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Profile',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+          ),
+        ),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF3B82F6), Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                const SizedBox(height: 40),
+                Hero(
+                  tag: 'avatar_${widget.user.id}',
+                  child: CircleAvatar(
+                    radius: 60,
+                    backgroundColor: Colors.white.withOpacity(0.2),
+                    child: Icon(Icons.person, size: 80, color: Colors.white),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  widget.user.namaLengkap,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Chip(
+                  label: Text(
+                    widget.user.role.toUpperCase(),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  avatar: const Icon(Icons.shield, color: Colors.white),
+                ),
+                const SizedBox(height: 40),
+                Card(
+                  elevation: 10,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        _profileItem(
+                          Icons.person_outline,
+                          'Username',
+                          widget.user.username ?? '-',
+                        ),
+                        const Divider(),
+                        _profileItem(
+                          Icons.badge_outlined,
+                          'NIP/NISN',
+                          widget.user.nipNisn ?? '-',
+                        ),
+                        const Divider(),
+                        _profileItem(
+                          Icons.shield_outlined,
+                          'Role',
+                          widget.user.role.toUpperCase(),
+                        ),
+                        const SizedBox(height: 32),
+                        SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            onPressed: _ubahPassword,
+                            icon: const Icon(Icons.lock_reset_rounded),
+                            label: const Text(
+                              'Ubah Password',
+                              style: TextStyle(fontSize: 18),
+                            ),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFFEF4444),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _profileItem(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, color: const Color(0xFF3B82F6), size: 28),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+              ),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
