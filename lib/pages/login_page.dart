@@ -1,6 +1,4 @@
-// lib/pages/login_page.dart (ENHANCED: Modern UI with subtle gradients, neumorphic card, hero animations, smooth input transitions, consistent styling for immersive login experience)
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Not used but kept for consistency
 import '../api/api_service.dart';
 import '../models/user_model.dart';
 
@@ -107,8 +105,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -135,7 +131,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        // Logo/Icon
                         Hero(
                           tag: 'app_logo',
                           child: Container(
@@ -202,7 +197,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               key: _formKey,
                               child: Column(
                                 children: [
-                                  // Input Field 1
                                   Container(
                                     decoration: BoxDecoration(
                                       color: Colors.grey[50],
@@ -214,21 +208,20 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     ),
                                     child: TextFormField(
                                       controller: _inputC,
-                                      decoration: InputDecoration(
-                                        labelText: 'Username',
+                                      decoration: const InputDecoration(
+                                        labelText: 'Username / NIP / NISN',
                                         labelStyle: TextStyle(
-                                          color: const Color(0xFF6B7280),
+                                          color: Color(0xFF6B7280),
                                         ),
-                                        prefixIcon: const Icon(
+                                        prefixIcon: Icon(
                                           Icons.person_outline_rounded,
                                           color: Color(0xFF6B7280),
                                         ),
                                         border: InputBorder.none,
-                                        contentPadding:
-                                            const EdgeInsets.symmetric(
-                                              horizontal: 20,
-                                              vertical: 16,
-                                            ),
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 20,
+                                          vertical: 16,
+                                        ),
                                       ),
                                       style: const TextStyle(fontSize: 16),
                                       validator: (v) => v!.trim().isEmpty
@@ -237,7 +230,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     ),
                                   ),
                                   const SizedBox(height: 20),
-                                  // Input Field 2
                                   Container(
                                     decoration: BoxDecoration(
                                       color: Colors.grey[50],
@@ -252,8 +244,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                       obscureText: _obscure,
                                       decoration: InputDecoration(
                                         labelText: 'Password',
-                                        labelStyle: TextStyle(
-                                          color: const Color(0xFF6B7280),
+                                        labelStyle: const TextStyle(
+                                          color: Color(0xFF6B7280),
                                         ),
                                         prefixIcon: const Icon(
                                           Icons.lock_outline_rounded,
@@ -283,7 +275,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     ),
                                   ),
                                   const SizedBox(height: 32),
-                                  // Login Button
                                   SizedBox(
                                     width: double.infinity,
                                     height: 56,
@@ -300,9 +291,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                           ),
                                         ),
                                         elevation: 5,
-                                        shadowColor: const Color(
-                                          0xFF3B82F6,
-                                        ).withOpacity(0.3),
                                       ),
                                       child: _loading
                                           ? const SizedBox(
@@ -322,38 +310,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                             ),
                                     ),
                                   ),
-                                  const SizedBox(height: 20),
-                                  // Register Link
-                                  TextButton(
-                                    onPressed: () => Navigator.pushNamed(
-                                      context,
-                                      '/register',
-                                    ),
-                                    child: RichText(
-                                      text: TextSpan(
-                                        style: TextStyle(
-                                          color: const Color(0xFF3B82F6),
-                                          fontSize: 16,
-                                        ),
-                                        children: const [
-                                          TextSpan(text: 'Belum punya akun? '),
-                                          TextSpan(
-                                            text: 'Daftar di sini',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
                                 ],
                               ),
                             ),
                           ),
                         ),
                         const SizedBox(height: 40),
-                        // Tips Container
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(20),
@@ -365,24 +327,17 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               ],
                             ),
                             borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 10,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
                           ),
-                          child: Column(
+                          child: const Column(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.info_outline_rounded,
                                 size: 24,
                                 color: Colors.white,
                               ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'Tips Login:\n• Gunakan Username\n• Pastikan koneksi internet stabil',
+                              SizedBox(height: 12),
+                              Text(
+                                'Hubungi admin untuk pembuatan akun baru',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,

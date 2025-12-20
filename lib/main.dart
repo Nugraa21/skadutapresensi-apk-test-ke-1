@@ -1,7 +1,5 @@
-// lib/main.dart
 import 'package:flutter/material.dart';
 import 'pages/login_page.dart';
-import 'pages/register_page.dart';
 import 'pages/dashboard_page.dart';
 import 'pages/user_management_page.dart';
 import 'pages/presensi_page.dart';
@@ -80,7 +78,6 @@ class _SkadutaAppState extends State<SkadutaApp> {
       home: _initialPage,
       routes: {
         '/login': (_) => const LoginPage(),
-        '/register': (_) => const RegisterPage(),
         '/admin-presensi': (_) => const AdminPresensiPage(),
         '/rekap': (_) => const RekapPage(),
       },

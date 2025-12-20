@@ -3,31 +3,31 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'dart:io' show Platform, SocketException;
-import '../utils/encryption.dart'; // Asumsi lo punya file ini untuk ApiEncryption.decrypt
+import '../utils/encryption.dart'; // Sesuaikan path jika berbeda
 
 class ApiService {
-  // Ganti dengan URL ngrok kamu yang aktif
+  // Ganti dengan URL backend kamu (ngrok atau production)
   static const String baseUrl =
       "https://nonlitigious-alene-uninfinitely.ngrok-free.dev/backendapk/";
 
-  // API Key harus sama persis dengan yang di config.php
+  // API Key harus sama dengan yang ada di config.php
   static const String _apiKey = 'Skaduta2025!@#SecureAPIKey1234567890';
 
-  /// Get device ID for binding (skip for Windows desktop)
+  /// Get device ID untuk binding (skip untuk Windows/desktop)
   static Future<String> getDeviceId() async {
     try {
       if (Platform.isWindows) {
-        return ''; // Skip device ID for Windows desktop
+        return ''; // Skip device ID untuk testing di Windows
       }
       final deviceInfo = DeviceInfoPlugin();
       if (Platform.isAndroid) {
         final androidInfo = await deviceInfo.androidInfo;
-        return androidInfo.id; // Unique device ID for Android
+        return androidInfo.id; // Android device ID
       } else if (Platform.isIOS) {
         final iosInfo = await deviceInfo.iosInfo;
-        return iosInfo.identifierForVendor ?? ''; // Unique for iOS app installs
+        return iosInfo.identifierForVendor ?? ''; // iOS vendor identifier
       }
-      return ''; // Fallback
+      return '';
     } catch (e) {
       print('Error getting device ID: $e');
       return '';
@@ -44,17 +44,16 @@ class ApiService {
     return {
       'Content-Type': 'application/json',
       'X-App-Key': _apiKey,
-      'ngrok-skip-browser-warning': 'true', // Bypass halaman warning ngrok free
+      'ngrok-skip-browser-warning': 'true',
       if (withToken && token != null) 'Authorization': 'Bearer $token',
     };
   }
 
-  /// Dekripsi aman + debug print
+  /// Dekripsi response (jika pakai enkripsi)
   static Map<String, dynamic> _safeDecrypt(http.Response response) {
     try {
       print("=== RESPONSE DEBUG ===");
       print("STATUS CODE: ${response.statusCode}");
-      print("BODY LENGTH: ${response.body.length}");
       print("RAW BODY: '${response.body}'");
       print("======================");
 
@@ -74,9 +73,7 @@ class ApiService {
     }
   }
 
-  // ================== SAFE REQUEST WRAPPER ==================
   /// Wrapper aman untuk semua request HTTP
-  /// Menangani error jaringan/offline dengan pesan ramah ke user
   static Future<Map<String, dynamic>> _safeRequest(
     Future<http.Response> Function() request,
   ) async {
@@ -87,16 +84,13 @@ class ApiService {
           throw SocketException('Connection timed out');
         },
       );
-      // Handle status code spesifik
+
       if (res.statusCode == 401) {
-        return {
-          "status": false,
-          "message": "Periksa password dan username anda.",
-        };
+        return {"status": false, "message": "Username atau password salah."};
       } else if (res.statusCode == 403) {
         return {
           "status": false,
-          "message": "Akses ditolak. Periksa device ID atau hubungi admin.",
+          "message": "Akun ini sudah terikat ke perangkat lain. Hubungi admin.",
         };
       } else if (res.statusCode != 200) {
         return {
@@ -111,10 +105,7 @@ class ApiService {
         "message": "Kamu sedang offline. Periksa koneksi internetmu.",
       };
     } on http.ClientException catch (_) {
-      return {
-        "status": false,
-        "message": "Tidak dapat terhubung ke server. Pastikan kamu online.",
-      };
+      return {"status": false, "message": "Tidak dapat terhubung ke server."};
     } catch (e) {
       print("UNEXPECTED API ERROR: $e");
       return {
@@ -124,13 +115,13 @@ class ApiService {
     }
   }
 
-  // ================== GET DATA (ENKRIPSI) ==================
+  // ================== GET DATA ==================
   static Future<List<dynamic>> getUsers() async {
     final headers = await _getHeaders();
     final result = await _safeRequest(
       () => http.get(Uri.parse("$baseUrl/get_users.php"), headers: headers),
     );
-    if (result['status'] == false) return []; // Handle offline/server errors
+    if (result['status'] == false) return [];
     return List<dynamic>.from(result['data'] ?? []);
   }
 
@@ -142,7 +133,7 @@ class ApiService {
         headers: headers,
       ),
     );
-    if (result['status'] == false) return []; // Handle offline/server errors
+    if (result['status'] == false) return [];
     return List<dynamic>.from(result['data'] ?? []);
   }
 
@@ -154,7 +145,7 @@ class ApiService {
         headers: headers,
       ),
     );
-    if (result['status'] == false) return []; // Handle offline/server errors
+    if (result['status'] == false) return [];
     return List<dynamic>.from(result['data'] ?? []);
   }
 
@@ -165,7 +156,7 @@ class ApiService {
     final result = await _safeRequest(
       () => http.get(Uri.parse(url), headers: headers),
     );
-    if (result['status'] == false) return []; // Handle offline/server errors
+    if (result['status'] == false) return [];
     return List<dynamic>.from(result['data'] ?? []);
   }
 
@@ -189,17 +180,14 @@ class ApiService {
       ),
     );
 
-    // Simpan token & user info kalau login berhasil
+    // Simpan token & info user jika login berhasil
     if (result['status'] == true && result['token'] != null) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('auth_token', result['token']);
       await prefs.setString('user_id', result['user']['id'].toString());
       await prefs.setString('user_name', result['user']['nama_lengkap']);
       await prefs.setString('user_role', result['user']['role']);
-      await prefs.setString(
-        'device_id',
-        deviceId,
-      ); // Optional: store for future checks
+      await prefs.setString('device_id', deviceId);
     }
     return result;
   }
@@ -226,36 +214,6 @@ class ApiService {
       'nama_lengkap': prefs.getString('user_name') ?? '',
       'role': prefs.getString('user_role') ?? 'user',
     };
-  }
-
-  // ================== REGISTER ==================
-  static Future<Map<String, dynamic>> register({
-    required String username,
-    required String namaLengkap,
-    required String nipNisn,
-    required String password,
-    required String role,
-    required String status, // <--- BARU: status pegawai
-  }) async {
-    final deviceId = await getDeviceId();
-
-    final headers = await _getHeaders(withToken: false);
-    final result = await _safeRequest(
-      () => http.post(
-        Uri.parse("$baseUrl/register.php"),
-        headers: headers,
-        body: jsonEncode({
-          "username": username,
-          "nama_lengkap": namaLengkap,
-          "nip_nisn": nipNisn,
-          "password": password,
-          "role": role,
-          "status": status, // <--- KIRIM STATUS
-          "device_id": deviceId,
-        }),
-      ),
-    );
-    return result;
   }
 
   // ================== SUBMIT PRESENSI ==================
