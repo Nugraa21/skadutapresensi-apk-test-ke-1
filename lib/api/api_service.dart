@@ -6,26 +6,26 @@ import 'dart:io' show Platform, SocketException;
 import '../utils/encryption.dart'; // Sesuaikan path jika berbeda
 
 class ApiService {
-  // Ganti dengan URL backend kamu (ngrok atau production)
+  // Ganti dengan URL ngrok atau production kamu
   static const String baseUrl =
       "https://nonlitigious-alene-uninfinitely.ngrok-free.dev/backendapk/";
 
-  // API Key harus sama dengan yang ada di config.php
+  // API Key harus sama persis dengan yang di config.php / proteksi.php
   static const String _apiKey = 'Skaduta2025!@#SecureAPIKey1234567890';
 
   /// Get device ID untuk binding (skip untuk Windows/desktop)
   static Future<String> getDeviceId() async {
     try {
       if (Platform.isWindows) {
-        return ''; // Skip device ID untuk testing di Windows
+        return '';
       }
       final deviceInfo = DeviceInfoPlugin();
       if (Platform.isAndroid) {
         final androidInfo = await deviceInfo.androidInfo;
-        return androidInfo.id; // Android device ID
+        return androidInfo.id;
       } else if (Platform.isIOS) {
         final iosInfo = await deviceInfo.iosInfo;
-        return iosInfo.identifierForVendor ?? ''; // iOS vendor identifier
+        return iosInfo.identifierForVendor ?? '';
       }
       return '';
     } catch (e) {
@@ -49,7 +49,7 @@ class ApiService {
     };
   }
 
-  /// Dekripsi response (jika pakai enkripsi)
+  /// Dekripsi response kalau pakai enkripsi
   static Map<String, dynamic> _safeDecrypt(http.Response response) {
     try {
       print("=== RESPONSE DEBUG ===");
@@ -86,11 +86,19 @@ class ApiService {
       );
 
       if (res.statusCode == 401) {
-        return {"status": false, "message": "Username atau password salah."};
+        return {
+          "status": false,
+          "message": "Username atau password salah / API Key invalid",
+        };
       } else if (res.statusCode == 403) {
         return {
           "status": false,
-          "message": "Akun ini sudah terikat ke perangkat lain. Hubungi admin.",
+          "message": "Akun terikat ke perangkat lain. Hubungi admin.",
+        };
+      } else if (res.statusCode == 404) {
+        return {
+          "status": false,
+          "message": "Endpoint tidak ditemukan (404). Periksa URL server.",
         };
       } else if (res.statusCode != 200) {
         return {
@@ -108,10 +116,7 @@ class ApiService {
       return {"status": false, "message": "Tidak dapat terhubung ke server."};
     } catch (e) {
       print("UNEXPECTED API ERROR: $e");
-      return {
-        "status": false,
-        "message": "Terjadi kesalahan. Coba lagi nanti.",
-      };
+      return {"status": false, "message": "Terjadi kesalahan: $e"};
     }
   }
 
@@ -180,7 +185,6 @@ class ApiService {
       ),
     );
 
-    // Simpan token & info user jika login berhasil
     if (result['status'] == true && result['token'] != null) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('auth_token', result['token']);
@@ -189,6 +193,47 @@ class ApiService {
       await prefs.setString('user_role', result['user']['role']);
       await prefs.setString('device_id', deviceId);
     }
+    return result;
+  }
+
+  // ================== TAMBAH USER BARU (pakai update_user.php tanpa id) ==================
+  static Future<Map<String, dynamic>> addUser({
+    required String username,
+    required String namaLengkap,
+    required String password,
+    String? nipNisn,
+    String role = 'user',
+    String status = 'Karyawan',
+  }) async {
+    final headers = await _getHeaders();
+    final result = await _safeRequest(
+      () => http.post(
+        Uri.parse("$baseUrl/update_user.php"),
+        headers: headers,
+        body: jsonEncode({
+          "username": username,
+          "nama_lengkap": namaLengkap,
+          "password": password,
+          "nip_nisn": nipNisn ?? '',
+          "role": role,
+          "status": status,
+          // id sengaja tidak dikirim → server mode tambah user
+        }),
+      ),
+    );
+    return result;
+  }
+
+  // ================== RESET DEVICE ID ==================
+  static Future<Map<String, dynamic>> resetDeviceId(String userId) async {
+    final headers = await _getHeaders();
+    final result = await _safeRequest(
+      () => http.post(
+        Uri.parse("$baseUrl/update_user.php"),
+        headers: headers,
+        body: jsonEncode({"id": userId, "reset_device": true}),
+      ),
+    );
     return result;
   }
 
@@ -257,10 +302,7 @@ class ApiService {
       () => http.post(
         Uri.parse("$baseUrl/presensi_approve.php"),
         headers: headers,
-        body: jsonEncode({
-          "id": id.trim(),
-          "status": status, // "Disetujui" atau "Ditolak"
-        }),
+        body: jsonEncode({"id": id.trim(), "status": status}),
       ),
     );
     return result;
@@ -279,7 +321,7 @@ class ApiService {
     return result;
   }
 
-  // ================== UPDATE USER ==================
+  // ================== UPDATE USER (edit biasa) ==================
   static Future<Map<String, dynamic>> updateUser({
     required String id,
     required String username,
