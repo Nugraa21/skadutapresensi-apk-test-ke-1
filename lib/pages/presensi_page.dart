@@ -1,6 +1,5 @@
 // pages/presensi_page.dart
-// VERSI FINAL – SELFIE KAMERA FULLSCREEN + TOMBOL KIRIM SELALU KELIHATAN (ENHANCED: Modern Professional UI – Subtle gradients, clean typography, immersive map for seamless UX)
-
+// VERSI FINAL – SELFIE KAMERA FULLSCREEN + TOMBOL KIRIM SELALU KELIHATAN + ATURAN JAM BARU
 import 'dart:convert';
 import 'dart:io';
 
@@ -44,7 +43,7 @@ class _PresensiPageState extends State<PresensiPage>
 
   static const double sekolahLat = -7.7771639173358516;
   static const double sekolahLng = 110.36716347232226;
-  static const double maxRadius = 110;
+  static const double maxRadius = 120;
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
@@ -88,12 +87,10 @@ class _PresensiPageState extends State<PresensiPage>
     if (perm == LocationPermission.denied) {
       perm = await Geolocator.requestPermission();
       if (perm == LocationPermission.denied)
-        return _showSnack('Izin lokasi diperlukan untuk presensi');
+        return _showSnack('Izin lokasi diperlukan');
     }
     if (perm == LocationPermission.deniedForever)
-      return _showSnack(
-        'Izin lokasi ditolak permanen. Buka pengaturan aplikasi.',
-      );
+      return _showSnack('Izin lokasi ditolak permanen. Buka pengaturan.');
 
     try {
       final pos = await Geolocator.getCurrentPosition(
@@ -115,7 +112,6 @@ class _PresensiPageState extends State<PresensiPage>
     );
   }
 
-  // SELFIE FULLSCREEN
   Future<void> _openCameraSelfie() async {
     if (cameras.isEmpty) cameras = await availableCameras();
     if (cameras.isEmpty) {
@@ -144,15 +140,16 @@ class _PresensiPageState extends State<PresensiPage>
       final jarak = _distanceToSchool();
       if (jarak > maxRadius)
         return _showSnack(
-          'Lokasi saat ini di luar radius sekolah (${jarak.toStringAsFixed(0)} m)',
+          'Lokasi di luar radius sekolah (${jarak.toStringAsFixed(0)} m)',
         );
     }
 
     if (_wajibSelfie && _selfieFile == null)
       return _showSnack('Silakan ambil foto selfie');
-    if (_isIzin) {
-      if (_dokumenFile == null) return _showSnack('Unggah bukti izin');
-      if (_ketC.text.trim().isEmpty) return _showSnack('Isi keterangan izin');
+    if (_isIzin || _isPulangCepat) {
+      if (_ketC.text.trim().isEmpty) return _showSnack('Isi keterangan');
+      if (_isIzin && _dokumenFile == null)
+        return _showSnack('Unggah bukti izin');
     }
     if (_isPenugasan) {
       if (_infoC.text.trim().isEmpty)
@@ -205,8 +202,8 @@ class _PresensiPageState extends State<PresensiPage>
             children: [
               Container(
                 padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF10B981),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.check, size: 60, color: Colors.white),
@@ -224,7 +221,7 @@ class _PresensiPageState extends State<PresensiPage>
               Text(
                 "Presensi $_jenis telah tercatat.",
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: const Color(0xFF6B7280)),
+                style: const TextStyle(fontSize: 16, color: Color(0xFF6B7280)),
               ),
               const SizedBox(height: 24),
               const Text(
@@ -252,17 +249,13 @@ class _PresensiPageState extends State<PresensiPage>
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          msg,
-          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-        ),
-        backgroundColor: msg.contains('Berhasil') || msg.contains('tercatat')
+        content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w500)),
+        backgroundColor: msg.contains('Berhasil')
             ? const Color(0xFF10B981)
             : const Color(0xFFEF4444),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
-        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -511,10 +504,41 @@ class _PresensiPageState extends State<PresensiPage>
     );
   }
 
+  Widget _buildTextField(
+    TextEditingController c,
+    String label,
+    String hint,
+    IconData icon, {
+    int maxLines = 3,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: TextField(
+        controller: c,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          prefixIcon: Icon(icon, color: const Color(0xFF6B7280)),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.all(16),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -526,12 +550,9 @@ class _PresensiPageState extends State<PresensiPage>
         elevation: 0,
         foregroundColor: Colors.white,
         flexibleSpace: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             gradient: LinearGradient(
-              colors: [
-                const Color(0xFF3B82F6).withOpacity(0.9),
-                const Color(0xFF3B82F6).withOpacity(0.6),
-              ],
+              colors: [Color(0xFF3B82F6), Color(0xFF2563EB)],
               begin: Alignment.topCenter,
               end: Alignment.bottomCenter,
             ),
@@ -539,9 +560,9 @@ class _PresensiPageState extends State<PresensiPage>
         ),
       ),
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
-            colors: [const Color(0xFF3B82F6).withOpacity(0.03), Colors.white],
+            colors: [Color(0xFF3B82F6), Colors.white],
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
           ),
@@ -550,7 +571,6 @@ class _PresensiPageState extends State<PresensiPage>
           top: false,
           child: Stack(
             children: [
-              // KONTEN SCROLLABLE
               SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 100, 16, 100),
                 child: Column(
@@ -573,40 +593,34 @@ class _PresensiPageState extends State<PresensiPage>
                       _isMapNeeded
                           ? 'Pastikan posisi Anda di wilayah sekolah'
                           : 'Lengkapi informasi berikut',
-                      style: TextStyle(
-                        color: const Color(0xFF6B7280),
+                      style: const TextStyle(
+                        color: Color(0xFF6B7280),
                         fontSize: 14,
                       ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 24),
-
                     if (_isMapNeeded) ...[
                       _buildMap(),
                       const SizedBox(height: 24),
                     ],
-
                     if (_isIzin || _isPulangCepat)
                       _buildTextField(
                         _ketC,
                         'Keterangan / Alasan',
                         'Misalnya: Sakit, urusan keluarga...',
                         Icons.description_outlined,
-                        cs,
                       ),
                     if (_isIzin || _isPulangCepat) const SizedBox(height: 16),
-
                     if (_isPenugasan)
                       _buildTextField(
                         _infoC,
                         'Informasi Penugasan',
                         'Deskripsikan tugas yang diberikan',
                         Icons.task_outlined,
-                        cs,
                         maxLines: 4,
                       ),
                     if (_isPenugasan) const SizedBox(height: 16),
-
                     if (_wajibSelfie)
                       Container(
                         decoration: BoxDecoration(
@@ -634,22 +648,14 @@ class _PresensiPageState extends State<PresensiPage>
                                 child: const Icon(
                                   Icons.camera_alt_outlined,
                                   color: Color(0xFF3B82F6),
-                                  size: 24,
                                 ),
                               ),
                               title: const Text(
                                 'Foto Selfie',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  fontSize: 16,
-                                ),
+                                style: TextStyle(fontWeight: FontWeight.w500),
                               ),
-                              subtitle: Text(
+                              subtitle: const Text(
                                 'Diperlukan untuk verifikasi',
-                                style: TextStyle(
-                                  color: const Color(0xFF9CA3AF),
-                                  fontSize: 12,
-                                ),
                               ),
                               trailing: const Icon(
                                 Icons.arrow_forward_ios,
@@ -674,7 +680,6 @@ class _PresensiPageState extends State<PresensiPage>
                         ),
                       ),
                     if (_wajibSelfie) const SizedBox(height: 16),
-
                     if (_isIzin || _isPenugasan)
                       Container(
                         decoration: BoxDecoration(
@@ -702,23 +707,15 @@ class _PresensiPageState extends State<PresensiPage>
                                 child: const Icon(
                                   Icons.attachment_outlined,
                                   color: Color(0xFFF59E0B),
-                                  size: 24,
                                 ),
                               ),
                               title: Text(
                                 _isIzin ? 'Bukti Izin' : 'Dokumen Penugasan',
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w500,
-                                  fontSize: 16,
                                 ),
                               ),
-                              subtitle: Text(
-                                'Pilih dari galeri',
-                                style: TextStyle(
-                                  color: const Color(0xFF9CA3AF),
-                                  fontSize: 12,
-                                ),
-                              ),
+                              subtitle: const Text('Pilih dari galeri'),
                               trailing: const Icon(
                                 Icons.arrow_forward_ios,
                                 size: 16,
@@ -741,13 +738,10 @@ class _PresensiPageState extends State<PresensiPage>
                           ],
                         ),
                       ),
-
                     const SizedBox(height: 80),
                   ],
                 ),
               ),
-
-              // TOMBOL KIRIM – Clean floating style
               Positioned(
                 left: 16,
                 right: 16,
@@ -776,7 +770,7 @@ class _PresensiPageState extends State<PresensiPage>
                                 strokeWidth: 2,
                               ),
                             )
-                          : const Icon(Icons.arrow_forward, size: 20),
+                          : const Icon(Icons.arrow_forward),
                       label: Text(
                         _loading ? 'Mengirim...' : 'Kirim Presensi',
                         style: const TextStyle(
@@ -787,11 +781,9 @@ class _PresensiPageState extends State<PresensiPage>
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF3B82F6),
                         foregroundColor: Colors.white,
-                        elevation: 0,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
                       ),
                     ),
                   ),
@@ -803,50 +795,8 @@ class _PresensiPageState extends State<PresensiPage>
       ),
     );
   }
-
-  Widget _buildTextField(
-    TextEditingController c,
-    String label,
-    String hint,
-    IconData icon,
-    ColorScheme cs, {
-    int maxLines = 3,
-  }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: TextField(
-        controller: c,
-        maxLines: maxLines,
-        style: const TextStyle(fontSize: 16),
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-          prefixIcon: const Icon(
-            Icons.description_outlined,
-            color: Color(0xFF6B7280),
-            size: 24,
-          ),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.all(16),
-          labelStyle: TextStyle(color: const Color(0xFF9CA3AF)),
-          hintStyle: TextStyle(color: const Color(0xFFD1D5DB)),
-        ),
-      ),
-    );
-  }
 }
 
-// HALAMAN KAMERA SELFIE – Minimalist clean design
 class CameraSelfieScreen extends StatefulWidget {
   final CameraDescription initialCamera;
   const CameraSelfieScreen({super.key, required this.initialCamera});
@@ -892,11 +842,10 @@ class _CameraSelfieScreenState extends State<CameraSelfieScreen> {
       final image = await _controller.takePicture();
       Navigator.pop(context, File(image.path));
     } catch (e) {
-      if (mounted) {
+      if (mounted)
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('Gagal mengambil foto')));
-      }
     }
   }
 
@@ -911,7 +860,6 @@ class _CameraSelfieScreenState extends State<CameraSelfieScreen> {
             return Stack(
               children: [
                 Center(child: CameraPreview(_controller)),
-                // Top bar
                 SafeArea(
                   child: Container(
                     padding: const EdgeInsets.symmetric(
@@ -934,7 +882,6 @@ class _CameraSelfieScreenState extends State<CameraSelfieScreen> {
                     ),
                   ),
                 ),
-                // Bottom controls
                 Align(
                   alignment: Alignment.bottomCenter,
                   child: Container(
