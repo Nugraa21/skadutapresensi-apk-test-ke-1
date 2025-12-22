@@ -1,5 +1,8 @@
 // pages/presensi_page.dart
-// VERSI FINAL – SELFIE KAMERA FULLSCREEN + TOMBOL KIRIM SELALU KELIHATAN + ATURAN JAM BARU
+// VERSI FINAL – SELFIE KAMERA FULLSCREEN + TOMBOL KIRIM SELALU KELIHATAN + ATURAN JAM BARU (VALIDASI JAM DI SERVER SAJA)
+// Tidak ada perubahan di Dart karena validasi jam sudah di-handle di PHP server dengan timezone Jogja.
+// Client hanya validasi lokasi dan field input.
+
 import 'dart:convert';
 import 'dart:io';
 
