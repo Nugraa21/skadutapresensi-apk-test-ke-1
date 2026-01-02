@@ -22,7 +22,7 @@
 // ------------------------------- NGROK --------------------------------------
 
 const String baseUrl =
-    "https://nonlitigious-alene-uninfinitely.ngrok-free.dev/backendapk/";
+    "https://nonlitigious-alene-uninfinitely.ngrok-free.dev/";
 
 // -------------------------- BASE URL VIA IP LOCAL ----------------------------
 //
