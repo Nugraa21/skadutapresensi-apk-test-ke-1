@@ -33,10 +33,13 @@ dependencies:
   crypto: ^3.0.3
   # ========================================================  
 
+
   # Sementara di-comment dulu ya dependency lama-nya biar gak bingung 
   device_info_plus: ^10.1.0
 
   # ================ dependency lama =======================
+  # flutter_local_notifications: ^17.0.0
+  # intl: ^0.18.1
   # shared_preferences: ^2.3.2   # For storing user data/device ID locally
   # device_info_plus: ^10.1.2    # For generating unique device ID (used in login/register)
   # uuid: ^4.0.0                 # For generating unique IDs
