@@ -195,7 +195,7 @@ class _UserManagementPageState extends State<UserManagementPage>
                 TextField(
                   controller: nipC,
                   decoration: InputDecoration(
-                    labelText: 'NIP/NISN (opsional)',
+                    labelText: 'NIP/NIK (opsional)',
                     prefixIcon: const Icon(Icons.badge_outlined),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -561,7 +561,7 @@ class _UserManagementPageState extends State<UserManagementPage>
               TextField(
                 controller: nipC,
                 decoration: const InputDecoration(
-                  labelText: 'NIP/NISN (opsional)',
+                  labelText: 'NIP/NIK (opsional)',
                   prefixIcon: Icon(Icons.badge),
                 ),
               ),
@@ -861,7 +861,7 @@ class _UserManagementPageState extends State<UserManagementPage>
                                               u['nip_nisn']
                                                   .toString()
                                                   .isNotEmpty)
-                                            Text('NIP/NISN: ${u['nip_nisn']}'),
+                                            Text('NIP/NIK: ${u['nip_nisn']}'),
                                         ],
                                       ),
                                       trailing: Row(

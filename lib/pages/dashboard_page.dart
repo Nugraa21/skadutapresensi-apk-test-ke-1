@@ -944,7 +944,7 @@ class _ProfilePageState extends State<ProfilePage> {
                         const Divider(),
                         _profileItem(
                           Icons.badge_outlined,
-                          'NIP/NISN',
+                          'NIP/NIK',
                           widget.user.nipNisn ?? '-',
                         ),
                         const Divider(),

@@ -209,7 +209,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     child: TextFormField(
                                       controller: _inputC,
                                       decoration: const InputDecoration(
-                                        labelText: 'Username / NIP / NISN',
+                                        labelText: 'Username / NIP / NIK',
                                         labelStyle: TextStyle(
                                           color: Color(0xFF6B7280),
                                         ),
