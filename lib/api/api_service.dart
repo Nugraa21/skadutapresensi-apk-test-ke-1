@@ -7,7 +7,9 @@ import '../utils/encryption.dart'; // Sesuaikan path jika berbeda
 
 class ApiService {
   // Ganti dengan URL ngrok atau production kamu
-  static const String baseUrl = "https://103.210.35.189:3001/";
+  static const String baseUrl =
+      // "http://192.168.0.108/backendapk/";
+      "https://nonlitigious-alene-uninfinitely.ngrok-free.dev/";
   // static const String baseUrl = "https://103.210.35.189:3001/";
 
   // API Key harus sama persis dengan yang di config.php / proteksi.php

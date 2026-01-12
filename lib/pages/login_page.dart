@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../api/api_service.dart';
-import '../models/user_model.dart';
+import '../api/api_service.dart'; // sesuaikan path
+import '../models/user_model.dart'; // sesuaikan path
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -31,6 +31,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeInOut),
     );
+
     _slideController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
@@ -39,6 +40,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
           CurvedAnimation(parent: _slideController, curve: Curves.easeOutBack),
         );
+
     _fadeController.forward();
     _slideController.forward();
   }
@@ -54,22 +56,22 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
+
     setState(() => _loading = true);
+
     try {
       final res = await ApiService.login(
         input: _inputC.text.trim(),
         password: _passC.text.trim(),
       );
+
       if (res['status'] == true) {
-        final userData = res['user'];
-        final user = UserModel(
-          id: userData['id'].toString(),
-          username: userData['username'] ?? '',
-          namaLengkap: userData['nama_lengkap'],
-          nipNisn: '',
-          role: userData['role'],
-        );
+        final userData = res['user'] as Map<String, dynamic>;
+
+        final user = UserModel.fromJson(userData);
+
         if (!mounted) return;
+
         Navigator.pushReplacementNamed(context, '/dashboard', arguments: user);
       } else {
         if (mounted) {
@@ -89,7 +91,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('Terjadi kesalahan: $e'),
             backgroundColor: const Color(0xFFEF4444),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
@@ -99,7 +101,9 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         );
       }
     } finally {
-      if (mounted) setState(() => _loading = false);
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -131,6 +135,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
+                        // Logo & Judul
                         Hero(
                           tag: 'app_logo',
                           child: Container(
@@ -179,6 +184,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           ),
                         ),
                         const SizedBox(height: 48),
+
+                        // Card Form
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -197,6 +204,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               key: _formKey,
                               child: Column(
                                 children: [
+                                  // Input Username / NIP / NIK
                                   Container(
                                     decoration: BoxDecoration(
                                       color: Colors.grey[50],
@@ -227,9 +235,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                       validator: (v) => v!.trim().isEmpty
                                           ? 'Wajib diisi'
                                           : null,
+                                      textInputAction: TextInputAction.next,
                                     ),
                                   ),
                                   const SizedBox(height: 20),
+
+                                  // Input Password
                                   Container(
                                     decoration: BoxDecoration(
                                       color: Colors.grey[50],
@@ -275,6 +286,8 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     ),
                                   ),
                                   const SizedBox(height: 32),
+
+                                  // Tombol Login
                                   SizedBox(
                                     width: double.infinity,
                                     height: 56,
@@ -315,7 +328,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             ),
                           ),
                         ),
+
                         const SizedBox(height: 40),
+
+                        // Info Box
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.all(20),
@@ -337,7 +353,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                               ),
                               SizedBox(height: 12),
                               Text(
-                                'Hubungi admin untuk pembuatan akun baru',
+                                'Hubungi admin untuk pembuatan akun baru atau kendala login',
                                 style: TextStyle(
                                   color: Colors.white,
                                   fontSize: 14,
