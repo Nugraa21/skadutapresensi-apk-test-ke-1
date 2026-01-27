@@ -29,13 +29,16 @@ dependencies:
   open_file: ^3.3.2              # biar langsung buka file setelah download
   encrypt: ^5.0.3                # For AES-256-CBC encryption/decryption (key: 'nugra21')
   cryptography: ^2.7.0           # For AES-256-CBC encryption/decryption (key: 'nugra21')
-  shared_preferences: ^2.2.2     # For storing user data/device ID locally
-  crypto: ^3.0.3
+  # shared_preferences: ^2.2.2     # For storing user data/device ID locally
+  crypto: ^3.0.3                 # For hashing  
+  # device_info_plus: ^10.1.0      # For generating unique device ID (used in login/register)
   # ========================================================  
-
+  device_info_plus: ^10.1.0
+  android_id: ^0.5.1          # Ganti ke ini (versi terbaru & stable)
+  uuid: ^4.5.0                # Tetep, buat fallback
+  shared_preferences: ^2.3.2  # Pastiin ini ada
 
   # Sementara di-comment dulu ya dependency lama-nya biar gak bingung 
-  device_info_plus: ^10.1.0
 
   # ================ dependency lama =======================
   # flutter_local_notifications: ^17.0.0

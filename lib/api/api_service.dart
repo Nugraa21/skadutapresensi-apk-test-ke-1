@@ -2,7 +2,11 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:android_id/android_id.dart'; // Versi ^0.5.1
+import 'package:uuid/uuid.dart'; // Fallback UUID
 import 'dart:io' show Platform, SocketException;
+import 'package:flutter/services.dart'
+    show MissingPluginException, PlatformException; // BARU: Buat error handling
 import '../utils/encryption.dart'; // Sesuaikan path jika berbeda
 
 class ApiService {
@@ -16,24 +20,49 @@ class ApiService {
   // API Key harus sama persis dengan yang di config.php / proteksi.php
   static const String _apiKey = 'Skaduta2025!@#SecureAPIKey1234567890';
 
-  /// Get device ID untuk binding (skip untuk Windows/desktop)
+  /// Get device ID untuk binding (skip untuk Windows/desktop) - HYBRID VERSION (Improved)
   static Future<String> getDeviceId() async {
     try {
       if (Platform.isWindows) {
         return '';
       }
-      final deviceInfo = DeviceInfoPlugin();
       if (Platform.isAndroid) {
-        final androidInfo = await deviceInfo.androidInfo;
-        return androidInfo.id;
+        // Prioritas 1: Coba ambil Android ID asli (versi 0.5.1)
+        String? androidId;
+        try {
+          const androidIdPlugin = AndroidId();
+          androidId = await androidIdPlugin.getId();
+        } on MissingPluginException {
+          // Fallback kalau plugin gak register (jarang, tapi aman)
+          androidId = null;
+        } on PlatformException catch (e) {
+          // Handle error platform-specific
+          print('Platform error getting Android ID: $e'); // Log buat debug
+          androidId = null;
+        }
+
+        if (androidId != null && androidId.isNotEmpty) {
+          return androidId;
+        }
+
+        // Fallback: Generate UUID custom dan simpan persistent
+        final prefs = await SharedPreferences.getInstance();
+        String? savedId = prefs.getString('custom_device_id');
+        if (savedId == null || savedId.isEmpty) {
+          savedId = const Uuid().v4();
+          await prefs.setString('custom_device_id', savedId);
+        }
+        return savedId;
       } else if (Platform.isIOS) {
+        final deviceInfo = DeviceInfoPlugin();
         final iosInfo = await deviceInfo.iosInfo;
         return iosInfo.identifierForVendor ?? '';
       }
       return '';
     } catch (e) {
       print('Error getting device ID: $e');
-      return '';
+      // Ultimate fallback: UUID sederhana
+      return const Uuid().v4();
     }
   }
 
@@ -194,7 +223,10 @@ class ApiService {
       await prefs.setString('user_id', result['user']['id'].toString());
       await prefs.setString('user_name', result['user']['nama_lengkap']);
       await prefs.setString('user_role', result['user']['role']);
-      await prefs.setString('device_id', deviceId);
+      await prefs.setString(
+        'device_id',
+        deviceId,
+      ); // Simpan juga di local buat verif cepet
     }
     return result;
   }
