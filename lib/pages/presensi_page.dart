@@ -44,8 +44,11 @@ class _PresensiPageState extends State<PresensiPage>
   bool _loading = false;
   final ImagePicker _picker = ImagePicker();
 
-  static const double sekolahLat = -7.7771639173358516;
-  static const double sekolahLng = 110.36716347232226;
+  // -7.792772916291131, 110.40742770953916 Lokasi UTDI
+  // -7.793014, 110.407548 Lokasi SMK YK
+
+  static const double sekolahLat = -7.792772916291131;
+  static const double sekolahLng = 110.40742770953916;
   static const double maxRadius = 120;
 
   late AnimationController _pulseController;
