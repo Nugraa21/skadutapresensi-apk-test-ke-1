@@ -2,7 +2,7 @@
 // VERSI FINAL – SELFIE KAMERA FULLSCREEN + TOMBOL KIRIM SELALU KELIHATAN + ATURAN JAM BARU (VALIDASI JAM DI SERVER SAJA)
 // Tidak ada perubahan di Dart karena validasi jam sudah di-handle di PHP server dengan timezone Jogja.
 // Client hanya validasi lokasi dan field input.
-
+import 'package:url_launcher/url_launcher.dart';
 import 'dart:convert';
 import 'dart:io';
 
@@ -43,9 +43,6 @@ class _PresensiPageState extends State<PresensiPage>
   File? _dokumenFile;
   bool _loading = false;
   final ImagePicker _picker = ImagePicker();
-
-  // -7.792772916291131, 110.40742770953916 Lokasi UTDI
-  // -7.793014, 110.407548 Lokasi SMK YK
 
   static const double sekolahLat = -7.792772916291131;
   static const double sekolahLng = 110.40742770953916;
@@ -299,6 +296,21 @@ class _PresensiPageState extends State<PresensiPage>
                   urlTemplate:
                       'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
                   subdomains: const ['a', 'b', 'c'],
+                  userAgentPackageName:
+                      'com.nugra21.skadutapresensi', // <-- WAJIB! Ganti sesuai applicationId app kamu di build.gradle
+                ),
+                RichAttributionWidget(
+                  attributions: [
+                    TextSourceAttribution(
+                      '© OpenStreetMap contributors',
+                      onTap: () => launchUrl(
+                        Uri.parse('https://www.openstreetmap.org/copyright'),
+                      ),
+                    ),
+                  ],
+                  alignment: AttributionAlignment.bottomRight,
+                  showFlutterMapAttribution:
+                      false, // optional, hide attribution flutter_map biar clean
                 ),
                 AnimatedBuilder(
                   animation: _pulseAnimation,
