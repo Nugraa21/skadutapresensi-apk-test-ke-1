@@ -459,7 +459,7 @@ class _RekapPageState extends State<RekapPage> with TickerProviderStateMixin {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         title: const Text(
-          'Rekap Absensi Guru',
+          'Rekap Presensi Guru',
           style: TextStyle(fontWeight: FontWeight.w600),
         ),
         backgroundColor: Colors.transparent,

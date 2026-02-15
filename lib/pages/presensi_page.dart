@@ -39,9 +39,9 @@ class _PresensiPageState extends State<PresensiPage>
   File? _dokumenFile;
   bool _loading = false;
   final ImagePicker _picker = ImagePicker();
-
-  static const double sekolahLat = -7.792772916291131;
-  static const double sekolahLng = 110.40742770953916;
+  //  -7.79270752762213, 110.40769599697221
+  static const double sekolahLat = -7.79270752762213;
+  static const double sekolahLng = 110.40769599697221;
   static const double maxRadius = 120;
 
   late AnimationController _pulseController;

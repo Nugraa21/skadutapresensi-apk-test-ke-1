@@ -386,15 +386,15 @@ class _DashboardPageState extends State<DashboardPage>
       children: [
         _card(
           icon: Icons.login_rounded,
-          title: 'Absen Masuk Biasa',
-          subtitle: 'Absen masuk harian (otomatis disetujui)',
+          title: 'Presensi Masuk Biasa',
+          subtitle: 'Presensi masuk harian (otomatis disetujui)',
           onTap: () => _navigateToPresensi(context, 'Masuk'),
           color: const Color(0xFF10B981),
         ),
         _card(
           icon: Icons.logout_rounded,
-          title: 'Absen Pulang Biasa',
-          subtitle: 'Absen pulang harian (otomatis disetujui)',
+          title: 'Presensi Pulang Biasa',
+          subtitle: 'Presensi pulang harian (otomatis disetujui)',
           onTap: () => _navigateToPresensi(context, 'Pulang'),
           color: const Color(0xFFF59E0B),
         ),
@@ -482,7 +482,7 @@ class _DashboardPageState extends State<DashboardPage>
               const SizedBox(height: 24),
               _subCard(
                 icon: Icons.login_rounded,
-                title: 'Absen Masuk Penugasan',
+                title: 'Presensi Masuk Penugasan',
                 onTap: () {
                   Navigator.pop(ctx);
                   _navigateToPresensi(ctx, 'Penugasan_Masuk');
@@ -491,7 +491,7 @@ class _DashboardPageState extends State<DashboardPage>
               ),
               _subCard(
                 icon: Icons.logout_rounded,
-                title: 'Absen Pulang Penugasan',
+                title: 'Presensi Pulang Penugasan',
                 onTap: () {
                   Navigator.pop(ctx);
                   _navigateToPresensi(ctx, 'Penugasan_Pulang');
@@ -581,7 +581,8 @@ class _DashboardPageState extends State<DashboardPage>
         _card(
           icon: Icons.list_alt_rounded,
           title: 'Kelola User Presensi',
-          subtitle: 'Lihat list user, histori per user, dan konfirmasi absensi',
+          subtitle:
+              'Lihat list user, histori per user, dan konfirmasi Presensi',
           onTap: () {
             Navigator.pushNamed(context, '/admin-user-list');
           },
@@ -589,7 +590,7 @@ class _DashboardPageState extends State<DashboardPage>
         ),
         _card(
           icon: Icons.verified_user_rounded,
-          title: 'Konfirmasi Absensi',
+          title: 'Konfirmasi Presensi',
           subtitle: 'Setujui / tolak presensi user secara global',
           onTap: () {
             Navigator.pushNamed(context, '/admin-presensi');
@@ -598,7 +599,7 @@ class _DashboardPageState extends State<DashboardPage>
         ),
         _card(
           icon: Icons.table_chart_rounded,
-          title: 'Rekap Absensi',
+          title: 'Rekap Presensi',
           subtitle: 'Lihat rekap presensi semua user',
           onTap: () {
             Navigator.pushNamed(context, '/rekap');
@@ -625,7 +626,8 @@ class _DashboardPageState extends State<DashboardPage>
         _card(
           icon: Icons.list_alt_rounded,
           title: 'Kelola User Presensi',
-          subtitle: 'Lihat list user, histori per user, dan konfirmasi absensi',
+          subtitle:
+              'Lihat list user, histori per user, dan konfirmasi Presensi',
           onTap: () {
             Navigator.pushNamed(context, '/admin-user-list');
           },
@@ -633,7 +635,7 @@ class _DashboardPageState extends State<DashboardPage>
         ),
         _card(
           icon: Icons.verified_user_rounded,
-          title: 'Konfirmasi Absensi',
+          title: 'Konfirmasi Presensi',
           subtitle: 'Setujui / tolak presensi user secara global',
           onTap: () {
             Navigator.pushNamed(context, '/admin-presensi');
@@ -642,7 +644,7 @@ class _DashboardPageState extends State<DashboardPage>
         ),
         _card(
           icon: Icons.table_chart_rounded,
-          title: 'Rekap Absensi',
+          title: 'Rekap Presensi',
           subtitle: 'Lihat rekap presensi semua user',
           onTap: () {
             Navigator.pushNamed(context, '/rekap');

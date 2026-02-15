@@ -12,8 +12,9 @@ import '../utils/encryption.dart'; // Sesuaikan path jika berbeda
 class ApiService {
   // Ganti dengan URL ngrok atau production kamu
 
-  static const String baseUrl =
-      "https://marlin-relative-mongrel.ngrok-free.app/backendapk/";
+  static const String baseUrl = 
+  // "https://103.210.35.189:3001/";
+  "https://marlin-relative-mongrel.ngrok-free.app/backendapk/";
 
   // API Key harus sama persis dengan yang di config.php / proteksi.php
   static const String _apiKey = 'Skaduta2025!@#SecureAPIKey1234567890';
