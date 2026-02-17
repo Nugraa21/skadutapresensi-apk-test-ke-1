@@ -8,13 +8,14 @@ import 'dart:io' show Platform, SocketException;
 import 'package:flutter/services.dart'
     show MissingPluginException, PlatformException; // BARU: Buat error handling
 import '../utils/encryption.dart'; // Sesuaikan path jika berbeda
+import 'package:encrypt/encrypt.dart' as encrypt_pkg;
 
 class ApiService {
   // Ganti dengan URL ngrok atau production kamu
 
-  static const String baseUrl = 
-  // "https://103.210.35.189:3001/";
-  "https://marlin-relative-mongrel.ngrok-free.app/backendapk/";
+  static const String baseUrl =
+      // "https://103.210.35.189:3001/";
+      "http://10.10.68.208/backendapk/";
 
   // API Key harus sama persis dengan yang di config.php / proteksi.php
   static const String _apiKey = 'Skaduta2025!@#SecureAPIKey1234567890';
@@ -83,10 +84,10 @@ class ApiService {
   /// Dekripsi response kalau pakai enkripsi
   static Map<String, dynamic> _safeDecrypt(http.Response response) {
     try {
-      print("=== RESPONSE DEBUG ===");
-      print("STATUS CODE: ${response.statusCode}");
-      print("RAW BODY: '${response.body}'");
-      print("======================");
+      // print("=== RESPONSE DEBUG ===");
+      // print("STATUS CODE: ${response.statusCode}");
+      // print("RAW BODY: '${response.body}'");
+      // print("======================");
 
       if (response.body.isEmpty) {
         return {"status": false, "message": "Server mengirim response kosong"};
@@ -94,7 +95,40 @@ class ApiService {
 
       final body = jsonDecode(response.body);
       if (body['encrypted_data'] != null) {
+        // --- LATENCY TEST START ---
+        final stopwatchDec = Stopwatch()..start();
         final decryptedJson = ApiEncryption.decrypt(body['encrypted_data']);
+        stopwatchDec.stop();
+
+        final stopwatchEnc = Stopwatch()..start();
+        _simulateEncryption(decryptedJson);
+        stopwatchEnc.stop();
+
+        final decTime = stopwatchDec.elapsedMicroseconds / 1000.0; // ms
+        final encTime = stopwatchEnc.elapsedMicroseconds / 1000.0; // ms
+        final dataSizeKB = body['encrypted_data'].length / 1024.0;
+        final decSpeed = decTime > 0 ? (dataSizeKB / (decTime / 1000.0)) : 0.0;
+        final encSpeed = encTime > 0 ? (dataSizeKB / (encTime / 1000.0)) : 0.0;
+
+        print(
+          "\n╔════════════════════════════════════════════════════════════╗",
+        );
+        print("║  AES ENCRYPTION & DECRYPTION PERFORMANCE TEST            ║");
+        print("╠════════════════════════════════════════════════════════════╣");
+        print(
+          "║  Decrypt Latency : ${decTime.toStringAsFixed(3).padLeft(8)} ms | Speed: ${decSpeed.toStringAsFixed(2).padLeft(7)} KB/s   ║",
+        );
+        print(
+          "║  Encrypt Latency : ${encTime.toStringAsFixed(3).padLeft(8)} ms | Speed: ${encSpeed.toStringAsFixed(2).padLeft(7)} KB/s   ║",
+        );
+        print(
+          "║  Payload Size    : ${dataSizeKB.toStringAsFixed(2).padLeft(8)} KB                             ║",
+        );
+        print(
+          "╚════════════════════════════════════════════════════════════╝\n",
+        );
+        // --- LATENCY TEST END ---
+
         return jsonDecode(decryptedJson);
       }
       return body as Map<String, dynamic>;
@@ -102,6 +136,61 @@ class ApiService {
       print("GAGAL PARSE JSON: $e");
       return {"status": false, "message": "Gagal membaca respons dari server"};
     }
+  }
+
+  static String _simulateEncryption(String plainText) {
+    try {
+      final keyString = "SkadutaPresensi2025SecureKey1234";
+      final key = encrypt_pkg.Key.fromUtf8(keyString);
+      final iv = encrypt_pkg.IV.fromLength(16);
+      final encrypter = encrypt_pkg.Encrypter(
+        encrypt_pkg.AES(key, mode: encrypt_pkg.AESMode.cbc),
+      );
+      final encrypted = encrypter.encrypt(plainText, iv: iv);
+      final combined = iv.bytes + encrypted.bytes;
+      return base64Encode(combined);
+    } catch (e) {
+      return "";
+    }
+  }
+
+  static void _logSimulatedProcess(String plainText, String actionLabel) {
+    if (plainText.isEmpty) return;
+
+    // Simulate Encrypt
+    final stopwatchEnc = Stopwatch()..start();
+    final encrypted = _simulateEncryption(plainText);
+    stopwatchEnc.stop();
+
+    // Simulate Decrypt
+    final stopwatchDec = Stopwatch()..start();
+    try {
+      ApiEncryption.decrypt(encrypted);
+    } catch (_) {}
+    stopwatchDec.stop();
+
+    final encTime = stopwatchEnc.elapsedMicroseconds / 1000.0;
+    final decTime = stopwatchDec.elapsedMicroseconds / 1000.0;
+    final dataSizeKB = plainText.length / 1024.0;
+
+    final encSpeed = encTime > 0 ? (dataSizeKB / (encTime / 1000.0)) : 0.0;
+    final decSpeed = decTime > 0 ? (dataSizeKB / (decTime / 1000.0)) : 0.0;
+
+    print("\n╔════════════════════════════════════════════════════════════╗");
+    print(
+      "║  OUTGOING REQUEST TEST: ${actionLabel.padRight(25).substring(0, 25)}║",
+    );
+    print("╠════════════════════════════════════════════════════════════╣");
+    print(
+      "║  Encrypt Latency : ${encTime.toStringAsFixed(3).padLeft(8)} ms | Speed: ${encSpeed.toStringAsFixed(2).padLeft(7)} KB/s   ║",
+    );
+    print(
+      "║  Decrypt Latency : ${decTime.toStringAsFixed(3).padLeft(8)} ms | Speed: ${decSpeed.toStringAsFixed(2).padLeft(7)} KB/s   ║",
+    );
+    print(
+      "║  Payload Size    : ${dataSizeKB.toStringAsFixed(2).padLeft(8)} KB                             ║",
+    );
+    print("╚════════════════════════════════════════════════════════════╝\n");
   }
 
   /// Wrapper aman untuk semua request HTTP
@@ -204,15 +293,20 @@ class ApiService {
     final deviceId = await getDeviceId();
 
     final headers = await _getHeaders(withToken: false);
+
+    final bodyMap = {
+      "username": input,
+      "password": password,
+      "device_id": deviceId,
+    };
+    final jsonBody = jsonEncode(bodyMap);
+    _logSimulatedProcess(jsonBody, "LOGIN REQUEST");
+
     final result = await _safeRequest(
       () => http.post(
         Uri.parse("$baseUrl/login.php"),
         headers: headers,
-        body: jsonEncode({
-          "username": input,
-          "password": password,
-          "device_id": deviceId,
-        }),
+        body: jsonBody,
       ),
     );
 
@@ -240,19 +334,24 @@ class ApiService {
     String status = 'Karyawan',
   }) async {
     final headers = await _getHeaders();
+
+    final bodyMap = {
+      "username": username,
+      "nama_lengkap": namaLengkap,
+      "password": password,
+      "nip_nisn": nipNisn ?? '',
+      "role": role,
+      "status": status,
+      // id sengaja tidak dikirim → server mode tambah user
+    };
+    final jsonBody = jsonEncode(bodyMap);
+    _logSimulatedProcess(jsonBody, "ADD USER");
+
     final result = await _safeRequest(
       () => http.post(
         Uri.parse("$baseUrl/update_user.php"),
         headers: headers,
-        body: jsonEncode({
-          "username": username,
-          "nama_lengkap": namaLengkap,
-          "password": password,
-          "nip_nisn": nipNisn ?? '',
-          "role": role,
-          "status": status,
-          // id sengaja tidak dikirim → server mode tambah user
-        }),
+        body: jsonBody,
       ),
     );
     return result;
@@ -261,11 +360,14 @@ class ApiService {
   // ================== RESET DEVICE ID ==================
   static Future<Map<String, dynamic>> resetDeviceId(String userId) async {
     final headers = await _getHeaders();
+    final jsonBody = jsonEncode({"id": userId, "reset_device": true});
+    _logSimulatedProcess(jsonBody, "RESET DEVICE ID");
+
     final result = await _safeRequest(
       () => http.post(
         Uri.parse("$baseUrl/update_user.php"),
         headers: headers,
-        body: jsonEncode({"id": userId, "reset_device": true}),
+        body: jsonBody,
       ),
     );
     return result;
@@ -307,20 +409,25 @@ class ApiService {
     required String base64Image,
   }) async {
     final headers = await _getHeaders();
+
+    final bodyMap = {
+      "userId": userId,
+      "jenis": jenis,
+      "keterangan": keterangan,
+      "informasi": informasi,
+      "dokumenBase64": dokumenBase64,
+      "latitude": latitude,
+      "longitude": longitude,
+      "base64Image": base64Image,
+    };
+    final jsonBody = jsonEncode(bodyMap);
+    _logSimulatedProcess(jsonBody, "SUBMIT PRESENSI");
+
     final result = await _safeRequest(
       () => http.post(
         Uri.parse("$baseUrl/absen.php"),
         headers: headers,
-        body: jsonEncode({
-          "userId": userId,
-          "jenis": jenis,
-          "keterangan": keterangan,
-          "informasi": informasi,
-          "dokumenBase64": dokumenBase64,
-          "latitude": latitude,
-          "longitude": longitude,
-          "base64Image": base64Image,
-        }),
+        body: jsonBody,
       ),
     );
     return result;
@@ -332,11 +439,14 @@ class ApiService {
     required String status,
   }) async {
     final headers = await _getHeaders();
+    final jsonBody = jsonEncode({"id": id.trim(), "status": status});
+    _logSimulatedProcess(jsonBody, "UPDATE PRESENSI STATUS");
+
     final result = await _safeRequest(
       () => http.post(
         Uri.parse("$baseUrl/presensi_approve.php"),
         headers: headers,
-        body: jsonEncode({"id": id.trim(), "status": status}),
+        body: jsonBody,
       ),
     );
     return result;
@@ -345,11 +455,14 @@ class ApiService {
   // ================== DELETE USER ==================
   static Future<Map<String, dynamic>> deleteUser(String id) async {
     final headers = await _getHeaders();
+    final jsonBody = jsonEncode({"id": id});
+    _logSimulatedProcess(jsonBody, "DELETE USER");
+
     final result = await _safeRequest(
       () => http.post(
         Uri.parse("$baseUrl/delete_user.php"),
         headers: headers,
-        body: jsonEncode({"id": id}),
+        body: jsonBody,
       ),
     );
     return result;
@@ -374,11 +487,14 @@ class ApiService {
       if (password != null && password.isNotEmpty) "password": password,
     };
 
+    final jsonBody = jsonEncode(body);
+    _logSimulatedProcess(jsonBody, "UPDATE USER/PROFILE");
+
     final result = await _safeRequest(
       () => http.post(
         Uri.parse("$baseUrl/update_user.php"),
         headers: headers,
-        body: jsonEncode(body),
+        body: jsonBody,
       ),
     );
     return result;
