@@ -2,17 +2,62 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:android_id/android_id.dart'; // Versi ^0.5.1
-import 'package:uuid/uuid.dart'; // Fallback UUID
+import 'package:android_id/android_id.dart';
+import 'package:uuid/uuid.dart';
 import 'dart:io' show Platform, SocketException;
 import 'package:flutter/services.dart'
-    show MissingPluginException, PlatformException; // BARU: Buat error handling
-import '../utils/encryption.dart'; // Sesuaikan path jika berbeda
+    show MissingPluginException, PlatformException;
 import 'package:encrypt/encrypt.dart' as encrypt_pkg;
+
+// --- Helper Encryption Class (Embedded) ---
+class ApiEncryption {
+  static const String _keyString =
+      "SkadutaPresensi2025SecureKey1234"; // Must match PHP
+
+  static String encrypt(String plainText) {
+    try {
+      final key = encrypt_pkg.Key.fromUtf8(_keyString);
+      final iv = encrypt_pkg.IV.fromLength(16); // Random IV
+      final encrypter = encrypt_pkg.Encrypter(
+        encrypt_pkg.AES(key, mode: encrypt_pkg.AESMode.cbc, padding: 'PKCS7'),
+      );
+
+      final encrypted = encrypter.encrypt(plainText, iv: iv);
+      // Format: IV (16 bytes) + Ciphertext
+      final combined = iv.bytes + encrypted.bytes;
+      return base64Encode(combined);
+    } catch (e) {
+      print("Encryption Error: $e");
+      return "";
+    }
+  }
+
+  static String decrypt(String encryptedBase64) {
+    try {
+      final key = encrypt_pkg.Key.fromUtf8(_keyString);
+      final decoded = base64Decode(encryptedBase64);
+
+      if (decoded.length < 16) return ""; // Invalid length
+
+      final ivBytes = decoded.sublist(0, 16);
+      final cipherBytes = decoded.sublist(16);
+
+      final iv = encrypt_pkg.IV(ivBytes);
+      final encrypter = encrypt_pkg.Encrypter(
+        encrypt_pkg.AES(key, mode: encrypt_pkg.AESMode.cbc, padding: 'PKCS7'),
+      );
+
+      final encrypted = encrypt_pkg.Encrypted(cipherBytes);
+      return encrypter.decrypt(encrypted, iv: iv);
+    } catch (e) {
+      print("Decryption Error: $e");
+      return "";
+    }
+  }
+}
 
 class ApiService {
   // Ganti dengan URL ngrok atau production kamu
-
   static const String baseUrl =
       // "https://103.210.35.189:3001/";
       "http://10.10.68.208/backendapk/";
@@ -27,17 +72,14 @@ class ApiService {
         return '';
       }
       if (Platform.isAndroid) {
-        // Prioritas 1: Coba ambil Android ID asli (versi 0.5.1)
         String? androidId;
         try {
           const androidIdPlugin = AndroidId();
           androidId = await androidIdPlugin.getId();
         } on MissingPluginException {
-          // Fallback kalau plugin gak register (jarang, tapi aman)
           androidId = null;
         } on PlatformException catch (e) {
-          // Handle error platform-specific
-          print('Platform error getting Android ID: $e'); // Log buat debug
+          print('Platform error getting Android ID: $e');
           androidId = null;
         }
 
@@ -45,7 +87,6 @@ class ApiService {
           return androidId;
         }
 
-        // Fallback: Generate UUID custom dan simpan persistent
         final prefs = await SharedPreferences.getInstance();
         String? savedId = prefs.getString('custom_device_id');
         if (savedId == null || savedId.isEmpty) {
@@ -61,7 +102,6 @@ class ApiService {
       return '';
     } catch (e) {
       print('Error getting device ID: $e');
-      // Ultimate fallback: UUID sederhana
       return const Uuid().v4();
     }
   }
@@ -81,233 +121,148 @@ class ApiService {
     };
   }
 
-  /// Dekripsi response kalau pakai enkripsi
-  static Map<String, dynamic> _safeDecrypt(http.Response response) {
+  // --- Core Methods for Encryption Handlers ---
+
+  static Future<Map<String, dynamic>> _sendEncryptedRequest(
+    String endpoint,
+    Map<String, dynamic> bodyData, {
+    bool withToken = true,
+  }) async {
     try {
-      // print("=== RESPONSE DEBUG ===");
-      // print("STATUS CODE: ${response.statusCode}");
-      // print("RAW BODY: '${response.body}'");
-      // print("======================");
+      final headers = await _getHeaders(withToken: withToken);
 
-      if (response.body.isEmpty) {
-        return {"status": false, "message": "Server mengirim response kosong"};
-      }
+      // 1. Encrypt Request Body
+      final jsonString = jsonEncode(bodyData);
+      final encryptedBody = ApiEncryption.encrypt(jsonString);
+      final payload = jsonEncode({"encrypted_data": encryptedBody});
 
-      final body = jsonDecode(response.body);
+      // 2. Send POST
+      final res = await http
+          .post(
+            Uri.parse("$baseUrl/$endpoint"),
+            headers: headers,
+            body: payload,
+          )
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw SocketException('Connection timed out'),
+          );
+
+      // 3. Handle Response
+      return _processResponse(res);
+    } catch (e) {
+      return _handleException(e);
+    }
+  }
+
+  // Generic processing for responses (GET or POST)
+  static Map<String, dynamic> _processResponse(http.Response res) {
+    if (res.statusCode == 401) {
+      return {"status": false, "message": "Unauthorized / Invalid Credentials"};
+    } else if (res.statusCode == 403) {
+      return {"status": false, "message": "Forbidden / Device Mismatch"};
+    } else if (res.statusCode == 404) {
+      return {"status": false, "message": "Endpoint not found (404)"};
+    } else if (res.statusCode != 200) {
+      return {"status": false, "message": "Server Error: ${res.statusCode}"};
+    }
+
+    try {
+      final body = jsonDecode(res.body);
       if (body['encrypted_data'] != null) {
-        // --- LATENCY TEST START ---
-        final stopwatchDec = Stopwatch()..start();
         final decryptedJson = ApiEncryption.decrypt(body['encrypted_data']);
-        stopwatchDec.stop();
-
-        final stopwatchEnc = Stopwatch()..start();
-        _simulateEncryption(decryptedJson);
-        stopwatchEnc.stop();
-
-        final decTime = stopwatchDec.elapsedMicroseconds / 1000.0; // ms
-        final encTime = stopwatchEnc.elapsedMicroseconds / 1000.0; // ms
-        final dataSizeKB = body['encrypted_data'].length / 1024.0;
-        final decSpeed = decTime > 0 ? (dataSizeKB / (decTime / 1000.0)) : 0.0;
-        final encSpeed = encTime > 0 ? (dataSizeKB / (encTime / 1000.0)) : 0.0;
-
-        print(
-          "\n╔════════════════════════════════════════════════════════════╗",
-        );
-        print("║  AES ENCRYPTION & DECRYPTION PERFORMANCE TEST            ║");
-        print("╠════════════════════════════════════════════════════════════╣");
-        print(
-          "║  Decrypt Latency : ${decTime.toStringAsFixed(3).padLeft(8)} ms | Speed: ${decSpeed.toStringAsFixed(2).padLeft(7)} KB/s   ║",
-        );
-        print(
-          "║  Encrypt Latency : ${encTime.toStringAsFixed(3).padLeft(8)} ms | Speed: ${encSpeed.toStringAsFixed(2).padLeft(7)} KB/s   ║",
-        );
-        print(
-          "║  Payload Size    : ${dataSizeKB.toStringAsFixed(2).padLeft(8)} KB                             ║",
-        );
-        print(
-          "╚════════════════════════════════════════════════════════════╝\n",
-        );
-        // --- LATENCY TEST END ---
-
+        if (decryptedJson.isEmpty) {
+          return {"status": false, "message": "Gagal dekripsi response server"};
+        }
         return jsonDecode(decryptedJson);
       }
-      return body as Map<String, dynamic>;
+      // Fallback for unencrypted responses (should verify strict mode request)
+      return body;
     } catch (e) {
-      print("GAGAL PARSE JSON: $e");
-      return {"status": false, "message": "Gagal membaca respons dari server"};
+      return {"status": false, "message": "Error parsing response: $e"};
     }
   }
 
-  static String _simulateEncryption(String plainText) {
+  static Future<Map<String, dynamic>> _safeGetRequest(String endpoint) async {
     try {
-      final keyString = "SkadutaPresensi2025SecureKey1234";
-      final key = encrypt_pkg.Key.fromUtf8(keyString);
-      final iv = encrypt_pkg.IV.fromLength(16);
-      final encrypter = encrypt_pkg.Encrypter(
-        encrypt_pkg.AES(key, mode: encrypt_pkg.AESMode.cbc),
-      );
-      final encrypted = encrypter.encrypt(plainText, iv: iv);
-      final combined = iv.bytes + encrypted.bytes;
-      return base64Encode(combined);
+      final headers = await _getHeaders();
+      final res = await http
+          .get(Uri.parse("$baseUrl/$endpoint"), headers: headers)
+          .timeout(
+            const Duration(seconds: 20),
+            onTimeout: () => throw SocketException('Timeout'),
+          );
+      return _processResponse(res);
     } catch (e) {
-      return "";
+      return _handleException(e);
     }
   }
 
-  static void _logSimulatedProcess(String plainText, String actionLabel) {
-    if (plainText.isEmpty) return;
-
-    // Simulate Encrypt
-    final stopwatchEnc = Stopwatch()..start();
-    final encrypted = _simulateEncryption(plainText);
-    stopwatchEnc.stop();
-
-    // Simulate Decrypt
-    final stopwatchDec = Stopwatch()..start();
-    try {
-      ApiEncryption.decrypt(encrypted);
-    } catch (_) {}
-    stopwatchDec.stop();
-
-    final encTime = stopwatchEnc.elapsedMicroseconds / 1000.0;
-    final decTime = stopwatchDec.elapsedMicroseconds / 1000.0;
-    final dataSizeKB = plainText.length / 1024.0;
-
-    final encSpeed = encTime > 0 ? (dataSizeKB / (encTime / 1000.0)) : 0.0;
-    final decSpeed = decTime > 0 ? (dataSizeKB / (decTime / 1000.0)) : 0.0;
-
-    print("\n╔════════════════════════════════════════════════════════════╗");
-    print(
-      "║  OUTGOING REQUEST TEST: ${actionLabel.padRight(25).substring(0, 25)}║",
-    );
-    print("╠════════════════════════════════════════════════════════════╣");
-    print(
-      "║  Encrypt Latency : ${encTime.toStringAsFixed(3).padLeft(8)} ms | Speed: ${encSpeed.toStringAsFixed(2).padLeft(7)} KB/s   ║",
-    );
-    print(
-      "║  Decrypt Latency : ${decTime.toStringAsFixed(3).padLeft(8)} ms | Speed: ${decSpeed.toStringAsFixed(2).padLeft(7)} KB/s   ║",
-    );
-    print(
-      "║  Payload Size    : ${dataSizeKB.toStringAsFixed(2).padLeft(8)} KB                             ║",
-    );
-    print("╚════════════════════════════════════════════════════════════╝\n");
-  }
-
-  /// Wrapper aman untuk semua request HTTP
-  static Future<Map<String, dynamic>> _safeRequest(
-    Future<http.Response> Function() request,
-  ) async {
-    try {
-      final res = await request().timeout(
-        const Duration(seconds: 20),
-        onTimeout: () {
-          throw SocketException('Connection timed out');
-        },
-      );
-
-      if (res.statusCode == 401) {
-        return {
-          "status": false,
-          "message": "Username atau password salah / API Key invalid",
-        };
-      } else if (res.statusCode == 403) {
-        return {
-          "status": false,
-          "message": "Akun terikat ke perangkat lain. Hubungi admin.",
-        };
-      } else if (res.statusCode == 404) {
-        return {
-          "status": false,
-          "message": "Endpoint tidak ditemukan (404). Periksa URL server.",
-        };
-      } else if (res.statusCode != 200) {
-        return {
-          "status": false,
-          "message": "Server error (${res.statusCode}). Coba lagi nanti.",
-        };
-      }
-      return _safeDecrypt(res);
-    } on SocketException catch (_) {
+  static Map<String, dynamic> _handleException(dynamic e) {
+    if (e is SocketException) {
       return {
         "status": false,
-        "message": "Kamu sedang offline. Periksa koneksi internetmu.",
+        "message": "Koneksi internet bermasalah/offline",
       };
-    } on http.ClientException catch (_) {
-      return {"status": false, "message": "Tidak dapat terhubung ke server."};
-    } catch (e) {
-      print("UNEXPECTED API ERROR: $e");
-      return {"status": false, "message": "Terjadi kesalahan: $e"};
     }
+    return {"status": false, "message": "Terjadi kesalahan: $e"};
   }
 
-  // ================== GET DATA ==================
+  // ================== ENDPOINTS ==================
+
+  // 1. GET USERS (Output Encryption Only)
   static Future<List<dynamic>> getUsers() async {
-    final headers = await _getHeaders();
-    final result = await _safeRequest(
-      () => http.get(Uri.parse("$baseUrl/get_users.php"), headers: headers),
-    );
+    final result = await _safeGetRequest("get_users.php");
     if (result['status'] == false) return [];
     return List<dynamic>.from(result['data'] ?? []);
   }
 
+  // 2. GET USER HISTORY (Converted to Encrypted POST)
+  // Backend absen_history.php support POST with encryption now.
   static Future<List<dynamic>> getUserHistory(String userId) async {
-    final headers = await _getHeaders();
-    final result = await _safeRequest(
-      () => http.get(
-        Uri.parse("$baseUrl/absen_history.php?user_id=$userId"),
-        headers: headers,
-      ),
-    );
+    final result = await _sendEncryptedRequest("absen_history.php", {
+      "user_id": userId,
+    });
     if (result['status'] == false) return [];
     return List<dynamic>.from(result['data'] ?? []);
   }
 
+  // 3. GET ALL PRESENSI (Output Encryption Only via GET)
+  // absen_admin_list.php handles standard GET for list, returning encrypted data.
   static Future<List<dynamic>> getAllPresensi() async {
-    final headers = await _getHeaders();
-    final result = await _safeRequest(
-      () => http.get(
-        Uri.parse("$baseUrl/absen_admin_list.php"),
-        headers: headers,
-      ),
-    );
+    final result = await _safeGetRequest("absen_admin_list.php");
     if (result['status'] == false) return [];
     return List<dynamic>.from(result['data'] ?? []);
   }
 
+  // 4. GET REKAP (Converted to Encrypted POST)
   static Future<List<dynamic>> getRekap({String? month, String? year}) async {
-    final headers = await _getHeaders();
-    var url = "$baseUrl/presensi_rekap.php";
-    if (month != null && year != null) url += "?month=$month&year=$year";
-    final result = await _safeRequest(
-      () => http.get(Uri.parse(url), headers: headers),
-    );
+    final body = {
+      if (month != null) "month": month,
+      if (year != null) "year": year,
+    };
+    // Use POST to send parameters securely
+    final result = await _sendEncryptedRequest("presensi_rekap.php", body);
     if (result['status'] == false) return [];
     return List<dynamic>.from(result['data'] ?? []);
   }
 
-  // ================== LOGIN ==================
+  // 5. LOGIN
   static Future<Map<String, dynamic>> login({
     required String input,
     required String password,
   }) async {
     final deviceId = await getDeviceId();
-
-    final headers = await _getHeaders(withToken: false);
-
-    final bodyMap = {
+    final body = {
       "username": input,
       "password": password,
       "device_id": deviceId,
     };
-    final jsonBody = jsonEncode(bodyMap);
-    _logSimulatedProcess(jsonBody, "LOGIN REQUEST");
 
-    final result = await _safeRequest(
-      () => http.post(
-        Uri.parse("$baseUrl/login.php"),
-        headers: headers,
-        body: jsonBody,
-      ),
+    final result = await _sendEncryptedRequest(
+      "login.php",
+      body,
+      withToken: false,
     );
 
     if (result['status'] == true && result['token'] != null) {
@@ -316,15 +271,12 @@ class ApiService {
       await prefs.setString('user_id', result['user']['id'].toString());
       await prefs.setString('user_name', result['user']['nama_lengkap']);
       await prefs.setString('user_role', result['user']['role']);
-      await prefs.setString(
-        'device_id',
-        deviceId,
-      ); // Simpan juga di local buat verif cepet
+      await prefs.setString('device_id', deviceId);
     }
     return result;
   }
 
-  // ================== TAMBAH USER BARU (pakai update_user.php tanpa id) ==================
+  // 6. ADD USER
   static Future<Map<String, dynamic>> addUser({
     required String username,
     required String namaLengkap,
@@ -333,59 +285,36 @@ class ApiService {
     String role = 'user',
     String status = 'Karyawan',
   }) async {
-    final headers = await _getHeaders();
-
-    final bodyMap = {
+    final body = {
       "username": username,
       "nama_lengkap": namaLengkap,
       "password": password,
       "nip_nisn": nipNisn ?? '',
       "role": role,
       "status": status,
-      // id sengaja tidak dikirim → server mode tambah user
     };
-    final jsonBody = jsonEncode(bodyMap);
-    _logSimulatedProcess(jsonBody, "ADD USER");
-
-    final result = await _safeRequest(
-      () => http.post(
-        Uri.parse("$baseUrl/update_user.php"),
-        headers: headers,
-        body: jsonBody,
-      ),
-    );
-    return result;
+    return await _sendEncryptedRequest("update_user.php", body);
   }
 
-  // ================== RESET DEVICE ID ==================
+  // 7. RESET DEVICE ID
   static Future<Map<String, dynamic>> resetDeviceId(String userId) async {
-    final headers = await _getHeaders();
-    final jsonBody = jsonEncode({"id": userId, "reset_device": true});
-    _logSimulatedProcess(jsonBody, "RESET DEVICE ID");
-
-    final result = await _safeRequest(
-      () => http.post(
-        Uri.parse("$baseUrl/update_user.php"),
-        headers: headers,
-        body: jsonBody,
-      ),
-    );
-    return result;
+    final body = {"id": userId, "reset_device": true};
+    return await _sendEncryptedRequest("update_user.php", body);
   }
 
-  // ================== LOGOUT ==================
+  // 8. LOGOUT
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
   }
 
-  // ================== CEK LOGIN STATUS ==================
+  // 9. CHECK LOGIN STATUS
   static Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('auth_token') != null;
   }
 
-  // ================== GET USER SAAT INI ==================
+  // 10. GET CURRENT USER (Local)
   static Future<Map<String, String>?> getCurrentUser() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('auth_token');
@@ -397,7 +326,7 @@ class ApiService {
     };
   }
 
-  // ================== SUBMIT PRESENSI ==================
+  // 11. SUBMIT PRESENSI
   static Future<Map<String, dynamic>> submitPresensi({
     required String userId,
     required String jenis,
@@ -408,67 +337,49 @@ class ApiService {
     required String longitude,
     required String base64Image,
   }) async {
-    final headers = await _getHeaders();
-
-    final bodyMap = {
-      "userId": userId,
+    // Note: presensi_add.php now supports JSON input via encrypted_data
+    // Map data to match what PHP expects (from $_POST or JSON)
+    final body = {
+      "user_id":
+          userId, // PHP uses user_id or userId depending on file, presensi_add.php uses user_id
+      "userId":
+          userId, // Send both to be safe or check file. absen.php checks both.
       "jenis": jenis,
+      "status": jenis, // presensi_add.php uses 'status' for jenis
       "keterangan": keterangan,
       "informasi": informasi,
       "dokumenBase64": dokumenBase64,
       "latitude": latitude,
       "longitude": longitude,
       "base64Image": base64Image,
+      "foto": base64Image, // presensi_add.php uses 'foto'
     };
-    final jsonBody = jsonEncode(bodyMap);
-    _logSimulatedProcess(jsonBody, "SUBMIT PRESENSI");
 
-    final result = await _safeRequest(
-      () => http.post(
-        Uri.parse("$baseUrl/absen.php"),
-        headers: headers,
-        body: jsonBody,
-      ),
-    );
-    return result;
+    // We can target specific endpoint depending on logic.
+    // If using 'absen.php' (Main Logic):
+    return await _sendEncryptedRequest("absen.php", body);
   }
 
-  // ================== APPROVE PRESENSI ==================
+  // 12. APPROVE PRESENSI
   static Future<Map<String, dynamic>> updatePresensiStatus({
     required String id,
     required String status,
   }) async {
-    final headers = await _getHeaders();
-    final jsonBody = jsonEncode({"id": id.trim(), "status": status});
-    _logSimulatedProcess(jsonBody, "UPDATE PRESENSI STATUS");
-
-    final result = await _safeRequest(
-      () => http.post(
-        Uri.parse("$baseUrl/presensi_approve.php"),
-        headers: headers,
-        body: jsonBody,
-      ),
-    );
-    return result;
+    final body = {"id": id.trim(), "status": status};
+    return await _sendEncryptedRequest("presensi_approve.php", body);
   }
 
-  // ================== DELETE USER ==================
+  // 13. DELETE USER
   static Future<Map<String, dynamic>> deleteUser(String id) async {
-    final headers = await _getHeaders();
-    final jsonBody = jsonEncode({"id": id});
-    _logSimulatedProcess(jsonBody, "DELETE USER");
-
-    final result = await _safeRequest(
-      () => http.post(
-        Uri.parse("$baseUrl/delete_user.php"),
-        headers: headers,
-        body: jsonBody,
-      ),
-    );
-    return result;
+    final body = {
+      "id": id,
+      "action": "delete",
+    }; // Added action 'delete' for absen_admin_list.php if needed, or delete_user.php
+    // Original used delete_user.php
+    return await _sendEncryptedRequest("delete_user.php", body);
   }
 
-  // ================== UPDATE USER (edit biasa) ==================
+  // 14. UPDATE USER
   static Future<Map<String, dynamic>> updateUser({
     required String id,
     required String username,
@@ -477,26 +388,14 @@ class ApiService {
     String? role,
     String? password,
   }) async {
-    final headers = await _getHeaders();
     final body = {
       "id": id,
       "username": username,
       "nama_lengkap": namaLengkap,
-      if (nipNisn != null && nipNisn.isNotEmpty) "nip_nisn": nipNisn,
+      if (nipNisn != null) "nip_nisn": nipNisn,
       if (role != null) "role": role,
-      if (password != null && password.isNotEmpty) "password": password,
+      if (password != null) "password": password,
     };
-
-    final jsonBody = jsonEncode(body);
-    _logSimulatedProcess(jsonBody, "UPDATE USER/PROFILE");
-
-    final result = await _safeRequest(
-      () => http.post(
-        Uri.parse("$baseUrl/update_user.php"),
-        headers: headers,
-        body: jsonBody,
-      ),
-    );
-    return result;
+    return await _sendEncryptedRequest("update_user.php", body);
   }
 }
