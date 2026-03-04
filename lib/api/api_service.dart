@@ -15,6 +15,7 @@ class ApiEncryption {
       "SkadutaPresensi2025SecureKey1234"; // Must match PHP
 
   static String encrypt(String plainText) {
+    final stopwatch = Stopwatch()..start();
     try {
       final key = encrypt_pkg.Key.fromUtf8(_keyString);
       final iv = encrypt_pkg.IV.fromLength(16); // Random IV
@@ -25,7 +26,19 @@ class ApiEncryption {
       final encrypted = encrypter.encrypt(plainText, iv: iv);
       // Format: IV (16 bytes) + Ciphertext
       final combined = iv.bytes + encrypted.bytes;
-      return base64Encode(combined);
+      final result = base64Encode(combined);
+      stopwatch.stop();
+
+      _printLogTable(
+        title: "ENCRYPTION LOG",
+        latency: stopwatch.elapsedMilliseconds,
+        originalSize: plainText.length,
+        resultSize: result.length,
+        plainText: plainText,
+        cipherText: result,
+      );
+
+      return result;
     } catch (e) {
       print("Encryption Error: $e");
       return "";
@@ -33,6 +46,7 @@ class ApiEncryption {
   }
 
   static String decrypt(String encryptedBase64) {
+    final stopwatch = Stopwatch()..start();
     try {
       final key = encrypt_pkg.Key.fromUtf8(_keyString);
       final decoded = base64Decode(encryptedBase64);
@@ -48,11 +62,55 @@ class ApiEncryption {
       );
 
       final encrypted = encrypt_pkg.Encrypted(cipherBytes);
-      return encrypter.decrypt(encrypted, iv: iv);
+      final decrypted = encrypter.decrypt(encrypted, iv: iv);
+      stopwatch.stop();
+
+      _printLogTable(
+        title: "DECRYPTION LOG",
+        latency: stopwatch.elapsedMilliseconds,
+        originalSize: encryptedBase64.length,
+        resultSize: decrypted.length,
+        plainText: decrypted,
+        cipherText: encryptedBase64,
+      );
+
+      return decrypted;
     } catch (e) {
       print("Decryption Error: $e");
       return "";
     }
+  }
+
+  static void _printLogTable({
+    required String title,
+    required int latency,
+    required int originalSize,
+    required int resultSize,
+    required String plainText,
+    required String cipherText,
+  }) {
+    const divider =
+        '==========================================================';
+    print('\n$divider');
+    const int maxPreview = 500;
+    String cleanPlain = plainText.length > maxPreview
+        ? "${plainText.substring(0, maxPreview)}...[TRUNCATED]"
+        : plainText;
+    String cleanCipher = cipherText.length > maxPreview
+        ? "${cipherText.substring(0, maxPreview)}...[TRUNCATED]"
+        : cipherText;
+
+    print(
+      '  ${title.toUpperCase()}  |  LATENSI: ${latency}ms  |  UKURAN: $originalSize -> $resultSize bytes',
+    );
+    print(divider);
+
+    print('DATA ASLI (PLAINTEXT):');
+    print(cleanPlain);
+    print(divider);
+    print('DATA TERENKRIPSI (CIPHERTEXT):');
+    print(cleanCipher);
+    print('$divider\n');
   }
 }
 
@@ -60,7 +118,7 @@ class ApiService {
   // Ganti dengan URL ngrok atau production kamu
   static const String baseUrl =
       // "https://103.210.35.189:3001/";
-      "http://10.10.68.208/backendapk/";
+      "https://marlin-relative-mongrel.ngrok-free.app/backendapk/";
 
   // API Key harus sama persis dengan yang di config.php / proteksi.php
   static const String _apiKey = 'Skaduta2025!@#SecureAPIKey1234567890';
@@ -399,3 +457,4 @@ class ApiService {
     return await _sendEncryptedRequest("update_user.php", body);
   }
 }
+// ================== END OF API SERVICE ==================
